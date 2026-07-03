@@ -67,10 +67,11 @@ def executar_gravacao_direta(tipo="Outro", titulo=None):
 
 
 def executar_preparacao_transcricao():
-    result = TranscriptionService().prepare_latest_recording()
-    console.print(f"[green]Pasta preparada:[/green] {result.output_folder}")
-    for file_path in result.converted_files:
-        console.print(f"- {file_path}")
+    result = TranscriptionService().transcribe_latest_recording()
+    console.print(f"[green]Pasta de saida:[/green] {result.output_folder}")
+    console.print(f"[green]Transcricao consolidada:[/green] {result.consolidated_file}")
+    for artifact in result.artifacts:
+        console.print(f"- {artifact.txt_file}")
 
 
 def executar_menu():

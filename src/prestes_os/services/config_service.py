@@ -15,6 +15,7 @@ def build_default_config(base_dir: Path | None = None) -> dict:
             "gravacoes_dir": str(base / "Gravacoes"),
             "transcricoes_dir": str(base / "Transcricoes"),
             "modelo_whisper": str(Path.home() / "whisper.cpp/models/ggml-small.bin"),
+            "comando_whisper": "whisper-cli",
             "idioma": "pt",
             "duracao_parte_minutos": 30,
         },

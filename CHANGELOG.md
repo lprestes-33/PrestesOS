@@ -4,7 +4,9 @@
 - Primeira versao do TranscriptionService adicionada.
 - Preparacao da gravacao mais recente para transcricao via `prestes transcrever`.
 - Conversao de `.opus`, `.m4a`, `.mp3` e `.wav` para WAV 16 kHz mono com `ffmpeg`.
-- Testes adicionados para descoberta da gravacao mais recente, conversao e despacho da CLI.
+- Integracao com Whisper.cpp para gerar `TXT`, `SRT`, `JSON` e `TRANSCRICAO_COMPLETA.txt`.
+- Persistencia de transcricoes no SQLite quando a gravacao possui `recording_id`.
+- Testes adicionados para descoberta da gravacao mais recente, conversao, persistencia e despacho da CLI.
 
 ## v0.3.2
 - AudioService consolidado com fluxo testavel e tolerancia a falhas.

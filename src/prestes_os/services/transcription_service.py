@@ -4,6 +4,7 @@ from pathlib import Path
 import subprocess
 
 from prestes_os.services.config_service import ConfigService
+from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
 
 
@@ -19,18 +20,44 @@ class TranscriptionPreparation:
     converted_files: list[Path]
 
 
+@dataclass
+class TranscriptionArtifact:
+    """Responsabilidade: representar os arquivos gerados para um WAV transcrito."""
+
+    wav_file: Path
+    txt_file: Path
+    srt_file: Path
+    json_file: Path
+    text: str
+
+
+@dataclass
+class TranscriptionResult:
+    """Responsabilidade: representar o resultado consolidado da transcricao."""
+
+    source_folder: Path
+    output_folder: Path
+    artifacts: list[TranscriptionArtifact]
+    consolidated_file: Path
+    recording_id: int | None
+
+
 class TranscriptionService:
-    """Responsabilidade: preparar gravacoes para o pipeline de transcricao."""
+    """Responsabilidade: preparar e executar o pipeline de transcricao."""
 
     def __init__(
         self,
         config_service: ConfigService | None = None,
         event_bus: EventBus | None = None,
-        command_runner=None,
+        database_service: DatabaseService | None = None,
+        ffmpeg_runner=None,
+        whisper_runner=None,
     ):
         self.config = config_service or ConfigService()
-        self.bus = event_bus or EventBus()
-        self.command_runner = command_runner or subprocess.run
+        self.db = database_service or DatabaseService()
+        self.bus = event_bus or EventBus(db_service=self.db)
+        self.ffmpeg_runner = ffmpeg_runner or subprocess.run
+        self.whisper_runner = whisper_runner or subprocess.run
 
     def _recording_sort_key(self, folder: Path):
         try:
@@ -38,6 +65,19 @@ class TranscriptionService:
         except ValueError:
             day_value = datetime.min
         return (day_value, folder.stat().st_mtime, folder.name)
+
+    def _run_command(self, runner, args, missing_dependency_message):
+        try:
+            runner(
+                args,
+                check=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError(missing_dependency_message) from exc
+        except subprocess.CalledProcessError as exc:
+            raise RuntimeError(f"Falha ao executar comando: {' '.join(args)}") from exc
 
     def find_latest_recording_folder(self) -> Path:
         recordings_dir = Path(self.config.get("audio.gravacoes_dir")).expanduser()
@@ -80,17 +120,7 @@ class TranscriptionService:
             str(output_file),
         ]
 
-        try:
-            self.command_runner(
-                command,
-                check=True,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-            )
-        except FileNotFoundError as exc:
-            raise RuntimeError("ffmpeg nao esta disponivel neste ambiente.") from exc
-        except subprocess.CalledProcessError as exc:
-            raise RuntimeError(f"Falha ao converter arquivo para WAV: {source_file.name}") from exc
+        self._run_command(self.ffmpeg_runner, command, "ffmpeg nao esta disponivel neste ambiente.")
 
         self.bus.publish(
             "transcription.file.converted",
@@ -130,3 +160,128 @@ class TranscriptionService:
             output_folder=output_folder,
             converted_files=converted_files,
         )
+
+    def read_recording_id(self, recording_folder: Path) -> int | None:
+        metadata_file = recording_folder / "metadata.txt"
+        if not metadata_file.exists():
+            return None
+
+        for line in metadata_file.read_text(encoding="utf-8").splitlines():
+            if line.startswith("recording_id="):
+                _, value = line.split("=", 1)
+                return int(value.strip())
+        return None
+
+    def transcribe_wav_file(self, wav_file: Path, output_folder: Path) -> TranscriptionArtifact:
+        model_path = Path(self.config.get("audio.modelo_whisper")).expanduser()
+        if not model_path.exists():
+            raise RuntimeError(f"Modelo whisper nao encontrado: {model_path}")
+
+        whisper_command = self.config.get("audio.comando_whisper", "whisper-cli")
+        language = self.config.get("audio.idioma", "pt")
+        output_base = output_folder / wav_file.stem
+
+        command = [
+            whisper_command,
+            "-m",
+            str(model_path),
+            "-f",
+            str(wav_file),
+            "-l",
+            str(language),
+            "-otxt",
+            "-osrt",
+            "-oj",
+            "-of",
+            str(output_base),
+        ]
+
+        self.bus.publish(
+            "transcription.file.started",
+            "transcription",
+            str(wav_file),
+            payload={"arquivo_wav": str(wav_file)},
+        )
+
+        self._run_command(
+            self.whisper_runner,
+            command,
+            "Whisper.cpp nao esta disponivel neste ambiente.",
+        )
+
+        txt_file = output_base.with_suffix(".txt")
+        srt_file = output_base.with_suffix(".srt")
+        json_file = output_base.with_suffix(".json")
+        for output_file in (txt_file, srt_file, json_file):
+            if not output_file.exists():
+                raise RuntimeError(f"Arquivo de transcricao esperado nao foi gerado: {output_file.name}")
+
+        text = txt_file.read_text(encoding="utf-8").strip()
+        self.bus.publish(
+            "transcription.file.completed",
+            "transcription",
+            str(txt_file),
+            payload={"arquivo_wav": str(wav_file), "arquivo_txt": str(txt_file)},
+        )
+        return TranscriptionArtifact(
+            wav_file=wav_file,
+            txt_file=txt_file,
+            srt_file=srt_file,
+            json_file=json_file,
+            text=text,
+        )
+
+    def write_consolidated_transcription(self, artifacts: list[TranscriptionArtifact], output_folder: Path) -> Path:
+        consolidated_file = output_folder / "TRANSCRICAO_COMPLETA.txt"
+        content = "\n\n".join(artifact.text for artifact in artifacts if artifact.text.strip())
+        consolidated_file.write_text(content + ("\n" if content else ""), encoding="utf-8")
+        return consolidated_file
+
+    def persist_transcriptions(self, recording_id: int | None, artifacts: list[TranscriptionArtifact]):
+        if recording_id is None:
+            return
+        for artifact in artifacts:
+            self.db.create_transcription(recording_id, artifact.txt_file, artifact.text)
+
+    def transcribe_latest_recording(self) -> TranscriptionResult:
+        preparation = self.prepare_latest_recording()
+        recording_id = self.read_recording_id(preparation.source_folder)
+
+        self.bus.publish(
+            "transcription.started",
+            "transcription",
+            str(preparation.source_folder),
+            payload={"recording_id": recording_id, "pasta_saida": str(preparation.output_folder)},
+        )
+
+        try:
+            artifacts = [
+                self.transcribe_wav_file(wav_file, preparation.output_folder)
+                for wav_file in preparation.converted_files
+            ]
+            consolidated_file = self.write_consolidated_transcription(artifacts, preparation.output_folder)
+            self.persist_transcriptions(recording_id, artifacts)
+            self.bus.publish(
+                "transcription.completed",
+                "transcription",
+                str(consolidated_file),
+                payload={
+                    "recording_id": recording_id,
+                    "arquivo_consolidado": str(consolidated_file),
+                },
+            )
+            return TranscriptionResult(
+                source_folder=preparation.source_folder,
+                output_folder=preparation.output_folder,
+                artifacts=artifacts,
+                consolidated_file=consolidated_file,
+                recording_id=recording_id,
+            )
+        except Exception as exc:
+            self.bus.publish(
+                "transcription.failed",
+                "transcription",
+                str(exc),
+                payload={"recording_id": recording_id},
+            )
+            raise

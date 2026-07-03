@@ -112,3 +112,25 @@ class DatabaseService:
         ).fetchone()
         conn.close()
         return row
+
+    def create_transcription(self, gravacao_id, arquivo, texto):
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO transcricoes (gravacao_id, arquivo, texto) VALUES (?, ?, ?)",
+            (gravacao_id, str(arquivo), texto),
+        )
+        transcription_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        return transcription_id
+
+    def list_transcriptions(self, gravacao_id):
+        conn = self.connect()
+        cur = conn.cursor()
+        rows = cur.execute(
+            "SELECT id, gravacao_id, arquivo, texto, criado_em FROM transcricoes WHERE gravacao_id = ? ORDER BY id ASC",
+            (gravacao_id,),
+        ).fetchall()
+        conn.close()
+        return rows

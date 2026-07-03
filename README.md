@@ -81,7 +81,10 @@ Antes de alterar o projeto, leia nesta ordem:
 - localiza a pasta de gravacao mais recente;
 - seleciona arquivos `.opus`, `.m4a`, `.mp3` e `.wav`;
 - converte cada arquivo para WAV 16 kHz mono via `ffmpeg`;
-- publica eventos de preparacao e conversao;
+- executa Whisper.cpp por arquivo WAV;
+- gera `TXT`, `SRT`, `JSON` e `TRANSCRICAO_COMPLETA.txt`;
+- registra textos no SQLite quando `recording_id` estiver presente no `metadata.txt`;
+- publica eventos de preparacao, conversao e transcricao;
 - suporta comando direto `prestes transcrever`.
 
 ## Proximo objetivo

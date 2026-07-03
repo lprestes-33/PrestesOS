@@ -22,3 +22,18 @@ def test_database_persists_recording(database_service, prestes_base_dir):
     assert row[1] == "Aula"
     assert row[2] == "Aula de Processo Civil"
     assert row[5] == "finalizada"
+
+
+def test_database_persists_transcription(database_service):
+    transcription_id = database_service.create_transcription(
+        gravacao_id=7,
+        arquivo="parte01.txt",
+        texto="texto consolidado",
+    )
+
+    rows = database_service.list_transcriptions(7)
+
+    assert transcription_id > 0
+    assert len(rows) == 1
+    assert rows[0][2] == "parte01.txt"
+    assert rows[0][3] == "texto consolidado"

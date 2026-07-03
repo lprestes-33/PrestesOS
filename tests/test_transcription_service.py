@@ -14,8 +14,28 @@ def create_recording_fixture(prestes_base_dir: Path) -> tuple[Path, Path]:
     (older / "parte01.opus").write_text("old", encoding="utf-8")
     (latest / "parte01.opus").write_text("new", encoding="utf-8")
     (latest / "parte02.mp3").write_text("new2", encoding="utf-8")
-    (latest / "metadata.txt").write_text("meta", encoding="utf-8")
+    (latest / "metadata.txt").write_text("recording_id=42\nmeta=ok\n", encoding="utf-8")
     return older, latest
+
+
+def build_service(prestes_base_dir, database_service, log_service, ffmpeg_runner, whisper_runner):
+    config = ConfigService(base_dir=prestes_base_dir)
+    data = config.load()
+    model_path = prestes_base_dir / "models" / "ggml-small.bin"
+    model_path.parent.mkdir(parents=True, exist_ok=True)
+    model_path.write_bytes(b"model")
+    data["audio"]["modelo_whisper"] = str(model_path)
+    data["audio"]["comando_whisper"] = "whisper-cli"
+    config.save(data)
+
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    return TranscriptionService(
+        config_service=config,
+        event_bus=bus,
+        database_service=database_service,
+        ffmpeg_runner=ffmpeg_runner,
+        whisper_runner=whisper_runner,
+    )
 
 
 def test_transcription_service_detects_latest_recording_folder(
@@ -25,9 +45,13 @@ def test_transcription_service_detects_latest_recording_folder(
     latest.touch()
     older.touch()
 
-    config = ConfigService(base_dir=prestes_base_dir)
-    bus = EventBus(db_service=database_service, log_service=log_service)
-    service = TranscriptionService(config_service=config, event_bus=bus, command_runner=lambda *args, **kwargs: None)
+    service = build_service(
+        prestes_base_dir,
+        database_service,
+        log_service,
+        ffmpeg_runner=lambda *args, **kwargs: None,
+        whisper_runner=lambda *args, **kwargs: None,
+    )
 
     result = service.find_latest_recording_folder()
 
@@ -38,15 +62,19 @@ def test_transcription_service_prepares_wav_files(prestes_base_dir, database_ser
     _, latest = create_recording_fixture(prestes_base_dir)
     commands = []
 
-    def command_runner(args, **kwargs):
+    def ffmpeg_runner(args, **kwargs):
         commands.append(args)
         output_path = Path(args[-1])
         output_path.write_bytes(b"wav")
         return None
 
-    config = ConfigService(base_dir=prestes_base_dir)
-    bus = EventBus(db_service=database_service, log_service=log_service)
-    service = TranscriptionService(config_service=config, event_bus=bus, command_runner=command_runner)
+    service = build_service(
+        prestes_base_dir,
+        database_service,
+        log_service,
+        ffmpeg_runner=ffmpeg_runner,
+        whisper_runner=lambda *args, **kwargs: None,
+    )
 
     result = service.prepare_latest_recording()
     events = database_service.last_events(5)
@@ -59,6 +87,47 @@ def test_transcription_service_prepares_wav_files(prestes_base_dir, database_ser
     assert commands[1][:6] == ["ffmpeg", "-y", "-i", str(latest / "parte02.mp3"), "-ar", "16000"]
 
 
+def test_transcription_service_transcribes_and_persists_outputs(
+    prestes_base_dir, database_service, log_service
+):
+    _, latest = create_recording_fixture(prestes_base_dir)
+
+    def ffmpeg_runner(args, **kwargs):
+        output_path = Path(args[-1])
+        output_path.write_bytes(b"wav")
+        return None
+
+    def whisper_runner(args, **kwargs):
+        output_base = Path(args[-1])
+        stem = output_base.name
+        output_base.with_suffix(".txt").write_text(f"texto {stem}", encoding="utf-8")
+        output_base.with_suffix(".srt").write_text(f"srt {stem}", encoding="utf-8")
+        output_base.with_suffix(".json").write_text(f'{{"text":"texto {stem}"}}', encoding="utf-8")
+        return None
+
+    service = build_service(
+        prestes_base_dir,
+        database_service,
+        log_service,
+        ffmpeg_runner=ffmpeg_runner,
+        whisper_runner=whisper_runner,
+    )
+
+    result = service.transcribe_latest_recording()
+    events = database_service.last_events(10)
+    rows = database_service.list_transcriptions(42)
+
+    assert result.source_folder == latest
+    assert result.recording_id == 42
+    assert result.consolidated_file.exists()
+    assert "texto parte01" in result.consolidated_file.read_text(encoding="utf-8")
+    assert "texto parte02" in result.consolidated_file.read_text(encoding="utf-8")
+    assert len(result.artifacts) == 2
+    assert len(rows) == 2
+    assert rows[0][2].endswith("parte01.txt")
+    assert any(event[1] == "transcription.completed" for event in events)
+
+
 def test_transcription_service_fails_without_supported_audio_files(
     prestes_base_dir, database_service, log_service
 ):
@@ -66,9 +135,13 @@ def test_transcription_service_fails_without_supported_audio_files(
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "metadata.txt").write_text("meta", encoding="utf-8")
 
-    config = ConfigService(base_dir=prestes_base_dir)
-    bus = EventBus(db_service=database_service, log_service=log_service)
-    service = TranscriptionService(config_service=config, event_bus=bus, command_runner=lambda *args, **kwargs: None)
+    service = build_service(
+        prestes_base_dir,
+        database_service,
+        log_service,
+        ffmpeg_runner=lambda *args, **kwargs: None,
+        whisper_runner=lambda *args, **kwargs: None,
+    )
 
     try:
         service.list_supported_audio_files(folder)
