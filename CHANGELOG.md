@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.8
+- `SearchService` adicionado para indexacao e busca textual local em SQLite.
+- Novo comando `prestes buscar` para consulta textual em transcricoes e resumos.
+- Testes adicionados para indexacao, busca e despacho da CLI.
+
 ## v0.3.7
 - `AIService` passou a resolver configuracao efetiva para modo `openai` via variaveis de ambiente.
 - Suporte a `OPENAI_API_KEY` e sobrescrita de modelo por `OPENAI_MODEL`.

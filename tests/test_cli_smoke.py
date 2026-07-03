@@ -71,3 +71,17 @@ def test_direct_ai_command_dispatches_to_service(monkeypatch):
     main_module.main(["resumir", "--tipo", "Aula"])
 
     assert calls == ["Aula"]
+
+
+def test_direct_search_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_busca_textual",
+        lambda consulta: calls.append(consulta),
+    )
+
+    main_module.main(["buscar", "competencia"])
+
+    assert calls == ["competencia"]

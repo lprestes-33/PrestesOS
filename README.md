@@ -44,6 +44,12 @@ Resumo offline da transcricao mais recente:
 prestes resumir --tipo Aula
 ```
 
+Busca textual local:
+
+```bash
+prestes buscar competencia
+```
+
 ## Estrutura
 
 ```text
@@ -114,6 +120,13 @@ Antes de alterar o projeto, leia nesta ordem:
 - gera resumo em arquivo na pasta `Resumos`;
 - possui preparacao para modo `openai` por variavel de ambiente;
 - usa `OPENAI_API_KEY` e pode sobrescrever modelo via `OPENAI_MODEL`.
+
+## Estado atual da busca
+
+- existe busca textual local em SQLite;
+- transcricoes consolidadas e resumos podem ser indexados;
+- a indexacao ocorre por arquivo e preserva caminho e tipo da fonte;
+- a CLI suporta busca direta com `prestes buscar`.
 
 ## Proximo objetivo
 

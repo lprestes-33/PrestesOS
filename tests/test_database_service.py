@@ -37,3 +37,26 @@ def test_database_persists_transcription(database_service):
     assert len(rows) == 1
     assert rows[0][2] == "parte01.txt"
     assert rows[0][3] == "texto consolidado"
+
+
+def test_database_upserts_search_document(database_service):
+    database_service.upsert_search_document(
+        source_type="summary",
+        source_path="C:/tmp/resumo.txt",
+        title="Resumo: aula-processo",
+        content="processo civil e competencia",
+        metadata="folder=aula-processo",
+    )
+    database_service.upsert_search_document(
+        source_type="summary",
+        source_path="C:/tmp/resumo.txt",
+        title="Resumo: aula-processo",
+        content="processo civil atualizado",
+        metadata="folder=aula-processo",
+    )
+
+    rows = database_service.search_documents("atualizado")
+
+    assert len(rows) == 1
+    assert rows[0][1] == "summary"
+    assert rows[0][4] == "processo civil atualizado"

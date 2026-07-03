@@ -11,6 +11,7 @@ from prestes_os.services.config_service import ConfigService
 from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
 from prestes_os.services.log_service import LogService
+from prestes_os.services.search_service import SearchService
 from prestes_os.services.transcription_service import TranscriptionService
 
 console = Console()
@@ -36,6 +37,8 @@ def build_parser():
         choices=["Aula", "Reuniao", "Conversa", "Outro"],
         help="Tipo de resumo a gerar.",
     )
+    search_parser = subparsers.add_parser("buscar", help="Busca textual nos conteudos indexados.")
+    search_parser.add_argument("consulta", help="Texto a buscar.")
     return parser
 
 
@@ -88,6 +91,20 @@ def executar_resumo_ia(tipo=None):
     console.print(f"[green]Tipo:[/green] {result.summary_type}")
 
 
+def executar_busca_textual(consulta):
+    service = SearchService()
+    indexed = service.reindex_documents()
+    results = service.search(consulta)
+    console.print(f"[green]Documentos indexados:[/green] {indexed}")
+    if not results:
+        console.print("[yellow]Nenhum resultado encontrado.[/yellow]")
+        return
+    for result in results:
+        console.print(f"[bold]{result.title}[/bold]")
+        console.print(f"{result.source_path}")
+        console.print(result.snippet)
+
+
 def executar_menu():
     db = DatabaseService()
     bus = EventBus()
@@ -112,6 +129,7 @@ def executar_menu():
     table.add_row("5", "Configuracao")
     table.add_row("6", "Logs")
     table.add_row("7", "Resumo IA")
+    table.add_row("8", "Buscar")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -135,6 +153,9 @@ def executar_menu():
     elif option == "7":
         tipo = selecionar_tipo()
         executar_resumo_ia(tipo=tipo)
+    elif option == "8":
+        consulta = console.input("Consulta: ").strip()
+        executar_busca_textual(consulta)
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
     else:
@@ -153,6 +174,9 @@ def main(argv=None):
         return
     if args.command == "resumir":
         executar_resumo_ia(tipo=args.tipo)
+        return
+    if args.command == "buscar":
+        executar_busca_textual(args.consulta)
         return
 
     executar_menu()

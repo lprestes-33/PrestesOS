@@ -17,3 +17,5 @@
 5. [x] Configuracao por YAML.
 6. [x] AIService offline placeholder.
 7. [x] Integracao futura com OpenAI via variavel de ambiente.
+8. [x] Busca textual local.
+9. [ ] Busca semantica.

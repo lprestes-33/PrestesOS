@@ -58,6 +58,20 @@ class DatabaseService:
         """
         )
 
+        cur.execute(
+            """
+        CREATE TABLE IF NOT EXISTS search_index (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            source_type TEXT NOT NULL,
+            source_path TEXT NOT NULL UNIQUE,
+            title TEXT,
+            content TEXT NOT NULL,
+            metadata TEXT,
+            atualizado_em TEXT DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+        )
+
         conn.commit()
         conn.close()
 
@@ -131,6 +145,42 @@ class DatabaseService:
         rows = cur.execute(
             "SELECT id, gravacao_id, arquivo, texto, criado_em FROM transcricoes WHERE gravacao_id = ? ORDER BY id ASC",
             (gravacao_id,),
+        ).fetchall()
+        conn.close()
+        return rows
+
+    def upsert_search_document(self, source_type, source_path, title, content, metadata=""):
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            INSERT INTO search_index (source_type, source_path, title, content, metadata, atualizado_em)
+            VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            ON CONFLICT(source_path) DO UPDATE SET
+                source_type=excluded.source_type,
+                title=excluded.title,
+                content=excluded.content,
+                metadata=excluded.metadata,
+                atualizado_em=CURRENT_TIMESTAMP
+            """,
+            (source_type, str(source_path), title, content, metadata),
+        )
+        conn.commit()
+        conn.close()
+
+    def search_documents(self, query, limit=10):
+        conn = self.connect()
+        cur = conn.cursor()
+        pattern = f"%{query}%"
+        rows = cur.execute(
+            """
+            SELECT id, source_type, source_path, title, content, metadata, atualizado_em
+            FROM search_index
+            WHERE content LIKE ? OR title LIKE ?
+            ORDER BY atualizado_em DESC, id DESC
+            LIMIT ?
+            """,
+            (pattern, pattern, limit),
         ).fetchall()
         conn.close()
         return rows
