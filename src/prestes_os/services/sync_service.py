@@ -29,6 +29,38 @@ class SyncManifest:
     items: list[SyncItem]
 
 
+@dataclass
+class SyncPlanItem:
+    """Responsabilidade: representar um item preparado para destino remoto."""
+
+    category: str
+    local_path: Path
+    remote_path: str
+    size_bytes: int
+    sha256: str
+
+
+@dataclass
+class SyncUploadPlan:
+    """Responsabilidade: representar um plano de upload por provedor."""
+
+    provider: str
+    generated_at: str
+    plan_file: Path
+    remote_root: str
+    credentials_path: Path
+    credentials_configured: bool
+    items: list[SyncPlanItem]
+
+
+@dataclass
+class SyncPreparation:
+    """Responsabilidade: agrupar manifesto local e plano remoto opcional."""
+
+    manifest: SyncManifest
+    upload_plan: SyncUploadPlan | None
+
+
 class SyncService:
     """Responsabilidade: preparar o conjunto de arquivos para sincronizacao futura."""
 
@@ -50,6 +82,12 @@ class SyncService:
 
     def _logs_path(self) -> Path:
         return Path(self.config.get("logs.path")).expanduser()
+
+    def _provider(self) -> str:
+        return self.config.get("sync.provider", "local-manifest")
+
+    def _google_drive_config(self) -> dict:
+        return self.config.get("sync.google_drive", {}) or {}
 
     def _hash_file(self, path: Path) -> str:
         digest = hashlib.sha256()
@@ -82,7 +120,7 @@ class SyncService:
         return [unique[key] for key in sorted(unique.keys())]
 
     def build_manifest(self) -> SyncManifest:
-        provider = self.config.get("sync.provider", "local-manifest")
+        provider = self._provider()
         manifest_dir = self._manifest_dir()
         manifest_dir.mkdir(parents=True, exist_ok=True)
 
@@ -128,3 +166,85 @@ class SyncService:
             manifest_file=manifest_file,
             items=items,
         )
+
+    def _google_drive_remote_path(self, item: SyncItem, remote_root: str) -> str:
+        category_root = {
+            "transcription": "Transcricoes",
+            "summary": "Resumos",
+            "log": "Logs",
+        }.get(item.category, "Arquivos")
+        normalized_relative = item.relative_path.replace("\\", "/")
+        return f"{remote_root}/{category_root}/{normalized_relative}"
+
+    def build_google_drive_plan(self, manifest: SyncManifest | None = None) -> SyncUploadPlan:
+        current_manifest = manifest or self.build_manifest()
+        google_drive = self._google_drive_config()
+        remote_root = google_drive.get("remote_root", "PrestesOS").strip("/")
+        credentials_path = Path(google_drive.get("credentials_path")).expanduser()
+        plan_file = Path(google_drive.get("plan_file")).expanduser()
+        plan_file.parent.mkdir(parents=True, exist_ok=True)
+
+        items = [
+            SyncPlanItem(
+                category=item.category,
+                local_path=item.path,
+                remote_path=self._google_drive_remote_path(item, remote_root),
+                size_bytes=item.size_bytes,
+                sha256=item.sha256,
+            )
+            for item in current_manifest.items
+        ]
+
+        payload = {
+            "provider": "google-drive",
+            "generated_at": current_manifest.generated_at,
+            "remote_root": remote_root,
+            "credentials_path": str(credentials_path),
+            "credentials_configured": credentials_path.exists(),
+            "manifest_file": str(current_manifest.manifest_file),
+            "items": [
+                {
+                    "category": item.category,
+                    "local_path": str(item.local_path),
+                    "remote_path": item.remote_path,
+                    "size_bytes": item.size_bytes,
+                    "sha256": item.sha256,
+                }
+                for item in items
+            ],
+        }
+        plan_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
+
+        self.bus.publish(
+            "sync.google_drive.plan.generated",
+            "sync",
+            str(plan_file),
+            payload={"provider": "google-drive", "quantidade": len(items)},
+        )
+
+        return SyncUploadPlan(
+            provider="google-drive",
+            generated_at=current_manifest.generated_at,
+            plan_file=plan_file,
+            remote_root=remote_root,
+            credentials_path=credentials_path,
+            credentials_configured=credentials_path.exists(),
+            items=items,
+        )
+
+    def prepare_sync(self) -> SyncPreparation:
+        manifest = self.build_manifest()
+        provider = self._provider()
+        upload_plan = None
+
+        if provider == "google-drive":
+            upload_plan = self.build_google_drive_plan(manifest)
+
+        self.bus.publish(
+            "sync.prepared",
+            "sync",
+            "Preparacao de sincronizacao concluida",
+            payload={"provider": provider, "quantidade": len(manifest.items)},
+        )
+
+        return SyncPreparation(manifest=manifest, upload_plan=upload_plan)

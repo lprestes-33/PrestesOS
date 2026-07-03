@@ -146,6 +146,7 @@ Antes de alterar o projeto, leia nesta ordem:
 - existe `SyncService` em modo local-first;
 - o sistema gera manifesto JSON com arquivos preparados para sincronizacao;
 - transcricoes e resumos entram no manifesto automaticamente;
+- existe modo preparatorio para Google Drive com plano de upload e pasta remota configuravel;
 - o envio remoto ainda nao acontece nesta etapa.
 
 ## Proximo objetivo

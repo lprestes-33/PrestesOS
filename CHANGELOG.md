@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.11
+- `SyncService` passou a preparar plano de upload para Google Drive sem acoplamento com rede.
+- Configuracao de `sync.google_drive` adicionada com pasta remota, credenciais e arquivo de plano.
+- CLI de sincronizacao passou a informar o plano Google Drive e o estado das credenciais.
+- Testes adicionados para plano Google Drive com e sem credenciais.
+
 ## v0.3.10
 - `SyncService` adicionado para gerar manifesto local de sincronizacao.
 - Novo comando `prestes sincronizar`.

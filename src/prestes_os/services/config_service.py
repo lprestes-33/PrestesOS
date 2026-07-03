@@ -35,6 +35,11 @@ def build_default_config(base_dir: Path | None = None) -> dict:
             "provider": "local-manifest",
             "manifest_dir": str(base / "Sync"),
             "include_logs": False,
+            "google_drive": {
+                "remote_root": "PrestesOS",
+                "credentials_path": str(base / "config" / "google_drive_credentials.json"),
+                "plan_file": str(base / "Sync" / "google_drive_upload_plan.json"),
+            },
         },
     }
 
@@ -84,8 +89,14 @@ class ConfigService:
             ("logs", "path"),
             ("ai", "resumos_dir"),
             ("sync", "manifest_dir"),
+            ("sync.google_drive", "credentials_path"),
+            ("sync.google_drive", "plan_file"),
         ):
-            section_data = data.get(section, {})
+            if "." in section:
+                top_level, nested = section.split(".", maxsplit=1)
+                section_data = data.get(top_level, {}).get(nested, {})
+            else:
+                section_data = data.get(section, {})
             if key in section_data:
                 section_data[key] = str(Path(section_data[key]).expanduser())
         return data
@@ -119,12 +130,17 @@ class ConfigService:
 
         sync = data["sync"]
         provider = sync.get("provider")
-        if not isinstance(provider, str) or not provider.strip():
+        if provider not in {"local-manifest", "google-drive"}:
             sync["provider"] = self.default_config["sync"]["provider"]
 
         include_logs = sync.get("include_logs")
         if not isinstance(include_logs, bool):
             sync["include_logs"] = self.default_config["sync"]["include_logs"]
+
+        google_drive = sync["google_drive"]
+        remote_root = google_drive.get("remote_root")
+        if not isinstance(remote_root, str) or not remote_root.strip():
+            google_drive["remote_root"] = self.default_config["sync"]["google_drive"]["remote_root"]
 
         return data
 
