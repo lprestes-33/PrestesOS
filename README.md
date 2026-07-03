@@ -32,6 +32,12 @@ Gravacao direta:
 prestes gravar --tipo Aula --titulo "Direito Constitucional"
 ```
 
+Preparacao da gravacao mais recente para transcricao:
+
+```bash
+prestes transcrever
+```
+
 ## Estrutura
 
 ```text
@@ -69,6 +75,14 @@ Antes de alterar o projeto, leia nesta ordem:
 - registra gravacao no SQLite;
 - publica eventos de inicio, parte, conclusao e falha;
 - suporta comando direto `prestes gravar`.
+
+## Estado atual da transcricao
+
+- localiza a pasta de gravacao mais recente;
+- seleciona arquivos `.opus`, `.m4a`, `.mp3` e `.wav`;
+- converte cada arquivo para WAV 16 kHz mono via `ffmpeg`;
+- publica eventos de preparacao e conversao;
+- suporta comando direto `prestes transcrever`.
 
 ## Proximo objetivo
 

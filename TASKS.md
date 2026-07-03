@@ -11,6 +11,7 @@
 ## Proxima Sprint
 
 1. [ ] TranscriptionService.
-2. [ ] Registro completo no SQLite.
-3. [ ] Logs estruturados.
-4. [ ] Configuracao por YAML.
+2. [ ] Integrar Whisper.cpp, TXT, SRT, JSON e consolidacao final.
+3. [ ] Registro completo no SQLite.
+4. [ ] Logs estruturados.
+5. [ ] Configuracao por YAML.

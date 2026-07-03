@@ -43,3 +43,17 @@ def test_direct_record_command_dispatches_to_audio_service(monkeypatch):
     main_module.main(["gravar", "--tipo", "Conversa", "--titulo", "Revisao"])
 
     assert calls == [("Conversa", "Revisao")]
+
+
+def test_direct_transcription_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_preparacao_transcricao",
+        lambda: calls.append("transcrever"),
+    )
+
+    main_module.main(["transcrever"])
+
+    assert calls == ["transcrever"]

@@ -10,6 +10,7 @@ from prestes_os.services.config_service import ConfigService
 from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
 from prestes_os.services.log_service import LogService
+from prestes_os.services.transcription_service import TranscriptionService
 
 console = Console()
 
@@ -26,6 +27,7 @@ def build_parser():
         help="Tipo da gravacao.",
     )
     record_parser.add_argument("--titulo", default=None, help="Titulo da gravacao.")
+    subparsers.add_parser("transcrever", help="Prepara a gravacao mais recente para transcricao.")
     return parser
 
 
@@ -64,6 +66,13 @@ def executar_gravacao_direta(tipo="Outro", titulo=None):
     AudioService().record(tipo=tipo, titulo=titulo)
 
 
+def executar_preparacao_transcricao():
+    result = TranscriptionService().prepare_latest_recording()
+    console.print(f"[green]Pasta preparada:[/green] {result.output_folder}")
+    for file_path in result.converted_files:
+        console.print(f"- {file_path}")
+
+
 def executar_menu():
     db = DatabaseService()
     bus = EventBus()
@@ -97,7 +106,7 @@ def executar_menu():
         titulo = console.input("Titulo ENTER para automatico: ").strip() or None
         executar_gravacao_direta(tipo=tipo, titulo=titulo)
     elif option == "2":
-        console.print("[yellow]TranscriptionService sera implementado na proxima sprint.[/yellow]")
+        executar_preparacao_transcricao()
     elif option == "3":
         console.print("[green]Banco SQLite ativo em ~/PrestesOS/database/prestes.db[/green]")
     elif option == "4":
@@ -119,6 +128,9 @@ def main(argv=None):
 
     if args.command == "gravar":
         executar_gravacao_direta(tipo=args.tipo, titulo=args.titulo)
+        return
+    if args.command == "transcrever":
+        executar_preparacao_transcricao()
         return
 
     executar_menu()
