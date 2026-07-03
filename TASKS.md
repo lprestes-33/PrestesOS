@@ -16,4 +16,4 @@
 4. [x] Logs estruturados.
 5. [x] Configuracao por YAML.
 6. [x] AIService offline placeholder.
-7. [ ] Integracao futura com OpenAI via variavel de ambiente.
+7. [x] Integracao futura com OpenAI via variavel de ambiente.

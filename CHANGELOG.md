@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.7
+- `AIService` passou a resolver configuracao efetiva para modo `openai` via variaveis de ambiente.
+- Suporte a `OPENAI_API_KEY` e sobrescrita de modelo por `OPENAI_MODEL`.
+- Fallback claro para `offline` e erro orientado quando `ai.mode=openai` sem chave.
+
 ## v0.3.6
 - `AIService` offline-first adicionado para gerar resumos da transcricao consolidada mais recente.
 - Novo comando `prestes resumir` para gerar resumo por tipo.

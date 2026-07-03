@@ -112,7 +112,8 @@ Antes de alterar o projeto, leia nesta ordem:
 - consome a transcricao consolidada mais recente;
 - detecta o tipo pelo `metadata.txt` ou aceita tipo explicito;
 - gera resumo em arquivo na pasta `Resumos`;
-- preserva gancho futuro para modo `openai`.
+- possui preparacao para modo `openai` por variavel de ambiente;
+- usa `OPENAI_API_KEY` e pode sobrescrever modelo via `OPENAI_MODEL`.
 
 ## Proximo objetivo
 

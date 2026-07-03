@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import os
 from pathlib import Path
 
 from prestes_os.services.config_service import ConfigService
@@ -16,12 +17,28 @@ class AIResult:
     mode: str
 
 
+@dataclass
+class AISettings:
+    """Responsabilidade: representar a configuracao efetiva do AIService."""
+
+    mode: str
+    provider: str
+    openai_model: str
+    has_openai_key: bool
+
+
 class AIService:
     """Responsabilidade: gerar resumos a partir das transcricoes do PrestesOS."""
 
-    def __init__(self, config_service: ConfigService | None = None, event_bus: EventBus | None = None):
+    def __init__(
+        self,
+        config_service: ConfigService | None = None,
+        event_bus: EventBus | None = None,
+        environment: dict | None = None,
+    ):
         self.config = config_service or ConfigService()
         self.bus = event_bus or EventBus()
+        self.environment = environment if environment is not None else os.environ
 
     def _transcriptions_dir(self) -> Path:
         return Path(self.config.get("audio.transcricoes_dir")).expanduser()
@@ -31,6 +48,23 @@ class AIService:
 
     def _recordings_dir(self) -> Path:
         return Path(self.config.get("audio.gravacoes_dir")).expanduser()
+
+    def load_settings(self) -> AISettings:
+        mode = self.config.get("ai.mode", "offline")
+        provider = self.config.get("ai.provider", "local-placeholder")
+        model = self.environment.get("OPENAI_MODEL") or self.config.get("ai.openai_model", "gpt-4.1-mini")
+        api_key = self.environment.get("OPENAI_API_KEY", "").strip()
+        has_openai_key = bool(api_key)
+
+        if mode == "openai" and not has_openai_key:
+            mode = "offline"
+
+        return AISettings(
+            mode=mode,
+            provider=provider,
+            openai_model=model,
+            has_openai_key=has_openai_key,
+        )
 
     def find_latest_transcription_file(self) -> Path:
         transcriptions_dir = self._transcriptions_dir()
@@ -82,7 +116,7 @@ class AIService:
         lines = [
             header,
             "",
-            f"Modo: offline-placeholder",
+            "Modo: offline-placeholder",
             f"Tipo identificado: {summary_type}",
             f"Palavras analisadas: {word_count}",
             "",
@@ -122,31 +156,51 @@ class AIService:
 
         return "\n".join(lines) + "\n"
 
+    def _build_openai_ready_message(self, summary_type: str, settings: AISettings) -> str:
+        return (
+            f"Resumo {summary_type}\n\n"
+            f"Modo: openai-preparado\n"
+            f"Provider: {settings.provider}\n"
+            f"Modelo configurado: {settings.openai_model}\n"
+            "Integracao de rede ainda nao ativada nesta etapa.\n"
+        )
+
     def summarize_latest_transcription(self, summary_type: str | None = None) -> AIResult:
         source_file = self.find_latest_transcription_file()
         detected_type = self.detect_summary_type(source_file, explicit_type=summary_type)
         output_file = self.build_output_file(source_file, detected_type)
         text = source_file.read_text(encoding="utf-8").strip()
-        mode = self.config.get("ai.mode", "offline")
+        settings = self.load_settings()
 
         self.bus.publish(
             "ai.summary.started",
             "ai",
             str(source_file),
-            payload={"tipo": detected_type, "modo": mode},
+            payload={"tipo": detected_type, "modo": settings.mode, "provider": settings.provider},
         )
 
-        if mode != "offline":
-            raise RuntimeError("Modo online ainda nao implementado. Use ai.mode=offline.")
+        if self.config.get("ai.mode", "offline") == "openai" and not settings.has_openai_key:
+            raise RuntimeError("OPENAI_API_KEY ausente. Defina a variavel de ambiente ou use ai.mode=offline.")
 
-        content = self._build_offline_summary(text, detected_type)
+        if settings.mode == "offline":
+            content = self._build_offline_summary(text, detected_type)
+        elif settings.mode == "openai":
+            content = self._build_openai_ready_message(detected_type, settings)
+        else:
+            raise RuntimeError(f"Modo de IA nao suportado: {settings.mode}")
+
         output_file.write_text(content, encoding="utf-8")
 
         self.bus.publish(
             "ai.summary.completed",
             "ai",
             str(output_file),
-            payload={"tipo": detected_type, "modo": mode, "arquivo_saida": str(output_file)},
+            payload={
+                "tipo": detected_type,
+                "modo": settings.mode,
+                "provider": settings.provider,
+                "arquivo_saida": str(output_file),
+            },
         )
 
         return AIResult(
@@ -154,5 +208,5 @@ class AIService:
             output_file=output_file,
             summary_type=detected_type,
             content=content,
-            mode=mode,
+            mode=settings.mode,
         )

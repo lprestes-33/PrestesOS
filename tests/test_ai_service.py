@@ -56,11 +56,31 @@ def test_ai_service_blocks_unimplemented_online_mode(prestes_base_dir, database_
     data["ai"]["mode"] = "openai"
     config.save(data)
     bus = EventBus(db_service=database_service, log_service=log_service)
-    service = AIService(config_service=config, event_bus=bus)
+    service = AIService(config_service=config, event_bus=bus, environment={})
 
     try:
         service.summarize_latest_transcription()
     except RuntimeError as exc:
-        assert "Modo online ainda nao implementado" in str(exc)
+        assert "OPENAI_API_KEY ausente" in str(exc)
     else:
         raise AssertionError("Era esperado falhar em modo openai placeholder.")
+
+
+def test_ai_service_uses_openai_ready_mode_when_env_key_exists(prestes_base_dir, database_service, log_service):
+    create_ai_fixture(prestes_base_dir)
+    config = ConfigService(base_dir=prestes_base_dir)
+    data = config.load()
+    data["ai"]["mode"] = "openai"
+    config.save(data)
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = AIService(
+        config_service=config,
+        event_bus=bus,
+        environment={"OPENAI_API_KEY": "test-key", "OPENAI_MODEL": "gpt-4.1"},
+    )
+
+    result = service.summarize_latest_transcription(summary_type="Outro")
+
+    assert result.mode == "openai"
+    assert "Modo: openai-preparado" in result.content
+    assert "Modelo configurado: gpt-4.1" in result.content
