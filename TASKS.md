@@ -21,4 +21,5 @@
 9. [x] Busca semantica.
 10. [x] Sync local-first com manifesto.
 11. [x] Integracao futura com Google Drive.
-12. [ ] Upload real para Google Drive via API.
+12. [x] Upload real para Google Drive via API.
+13. [ ] Persistir estado de sincronizacao incremental.

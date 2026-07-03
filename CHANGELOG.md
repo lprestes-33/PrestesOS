@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.12
+- Upload real para Google Drive adicionado via API HTTP com token Bearer em variavel de ambiente.
+- `SyncService` passou a executar sincronizacao completa quando `sync.provider=google-drive`.
+- Cliente leve de Google Drive adicionado sem dependencias externas pesadas.
+- Testes adicionados para upload pendente por autenticacao e envio remoto com cliente simulado.
+
 ## v0.3.11
 - `SyncService` passou a preparar plano de upload para Google Drive sem acoplamento com rede.
 - Configuracao de `sync.google_drive` adicionada com pasta remota, credenciais e arquivo de plano.

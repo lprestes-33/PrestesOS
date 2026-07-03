@@ -124,13 +124,17 @@ def executar_busca_semantica(consulta):
 
 
 def executar_preparacao_sync():
-    result = SyncService().prepare_sync()
-    console.print(f"[green]Manifesto gerado:[/green] {result.manifest.manifest_file}")
-    console.print(f"[green]Arquivos preparados:[/green] {len(result.manifest.items)}")
-    if result.upload_plan is not None:
-        console.print(f"[green]Plano Google Drive:[/green] {result.upload_plan.plan_file}")
-        status = "sim" if result.upload_plan.credentials_configured else "nao"
+    result = SyncService().execute_sync()
+    console.print(f"[green]Manifesto gerado:[/green] {result.preparation.manifest.manifest_file}")
+    console.print(f"[green]Arquivos preparados:[/green] {len(result.preparation.manifest.items)}")
+    if result.preparation.upload_plan is not None:
+        console.print(f"[green]Plano Google Drive:[/green] {result.preparation.upload_plan.plan_file}")
+        status = "sim" if result.preparation.upload_plan.credentials_configured else "nao"
         console.print(f"[green]Credenciais configuradas:[/green] {status}")
+    if result.upload_result is not None:
+        console.print(f"[green]Arquivos enviados:[/green] {result.upload_result.uploaded_count}")
+    elif result.preparation.upload_plan is not None:
+        console.print("[yellow]Upload remoto pendente: configure o token do Google Drive.[/yellow]")
 
 
 def executar_menu():

@@ -81,3 +81,55 @@ def test_sync_service_google_drive_plan_marks_missing_credentials(prestes_base_d
 
     assert result.upload_plan is not None
     assert result.upload_plan.credentials_configured is False
+
+
+def test_sync_service_execute_sync_marks_pending_auth(monkeypatch, prestes_base_dir, database_service, log_service):
+    create_sync_fixture(prestes_base_dir)
+    config = ConfigService(base_dir=prestes_base_dir)
+    data = config.load()
+    data["sync"]["provider"] = "google-drive"
+    config.save(data)
+
+    monkeypatch.delenv("GOOGLE_DRIVE_ACCESS_TOKEN", raising=False)
+
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SyncService(config_service=config, event_bus=bus)
+
+    result = service.execute_sync()
+
+    assert result.preparation.upload_plan is not None
+    assert result.upload_result is None
+
+
+def test_sync_service_execute_sync_uploads_to_google_drive(monkeypatch, prestes_base_dir, database_service, log_service):
+    class FakeGoogleDriveClient:
+        def __init__(self):
+            self.ensure_calls = []
+            self.upload_calls = []
+
+        def ensure_folder_path(self, folder_parts):
+            self.ensure_calls.append(tuple(folder_parts))
+            return "folder-123"
+
+        def upload_file(self, parent_id, file_name, local_path):
+            self.upload_calls.append((parent_id, file_name, local_path))
+            return "uploaded", f"id-{file_name}"
+
+    create_sync_fixture(prestes_base_dir)
+    config = ConfigService(base_dir=prestes_base_dir)
+    data = config.load()
+    data["sync"]["provider"] = "google-drive"
+    config.save(data)
+
+    monkeypatch.setenv("GOOGLE_DRIVE_ACCESS_TOKEN", "token-teste")
+
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SyncService(config_service=config, event_bus=bus)
+    fake_client = FakeGoogleDriveClient()
+    monkeypatch.setattr(service, "_build_google_drive_client", lambda: fake_client)
+
+    result = service.execute_sync()
+
+    assert result.upload_result is not None
+    assert result.upload_result.uploaded_count == 3
+    assert len(fake_client.upload_calls) == 3

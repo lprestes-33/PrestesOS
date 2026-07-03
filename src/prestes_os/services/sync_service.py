@@ -2,7 +2,10 @@ from dataclasses import dataclass
 from datetime import datetime
 import hashlib
 import json
+import mimetypes
+import os
 from pathlib import Path
+from urllib import error, parse, request
 
 from prestes_os.services.config_service import ConfigService
 from prestes_os.services.event_bus import EventBus
@@ -61,6 +64,164 @@ class SyncPreparation:
     upload_plan: SyncUploadPlan | None
 
 
+@dataclass
+class SyncUploadItemResult:
+    """Responsabilidade: representar o resultado do envio de um arquivo."""
+
+    local_path: Path
+    remote_path: str
+    file_id: str
+    status: str
+
+
+@dataclass
+class SyncUploadResult:
+    """Responsabilidade: representar o resultado final do upload remoto."""
+
+    provider: str
+    uploaded_at: str
+    uploaded_count: int
+    items: list[SyncUploadItemResult]
+
+
+@dataclass
+class SyncExecution:
+    """Responsabilidade: agrupar preparacao local e upload remoto opcional."""
+
+    preparation: SyncPreparation
+    upload_result: SyncUploadResult | None
+
+
+class SyncConfigurationError(RuntimeError):
+    """Responsabilidade: sinalizar configuracao invalida para sincronizacao remota."""
+
+
+class GoogleDriveClient:
+    """Responsabilidade: encapsular chamadas HTTP da API do Google Drive."""
+
+    def __init__(self, access_token: str, root_folder_id: str = "root"):
+        self.access_token = access_token
+        self.root_folder_id = root_folder_id
+
+    def _request(
+        self,
+        method: str,
+        url: str,
+        *,
+        query: dict | None = None,
+        headers: dict | None = None,
+        body: bytes | None = None,
+    ) -> dict:
+        target_url = url
+        if query:
+            target_url = f"{url}?{parse.urlencode(query)}"
+        request_headers = {"Authorization": f"Bearer {self.access_token}"}
+        if headers:
+            request_headers.update(headers)
+        http_request = request.Request(target_url, data=body, headers=request_headers, method=method)
+        try:
+            with request.urlopen(http_request) as response:
+                payload = response.read().decode("utf-8")
+        except error.HTTPError as exc:
+            details = exc.read().decode("utf-8", errors="replace")
+            raise RuntimeError(f"Falha na API do Google Drive: {exc.code} {details}") from exc
+        return json.loads(payload) if payload else {}
+
+    def _search_files(self, query_string: str) -> list[dict]:
+        payload = self._request(
+            "GET",
+            "https://www.googleapis.com/drive/v3/files",
+            query={
+                "q": query_string,
+                "fields": "files(id,name,mimeType,parents)",
+                "spaces": "drive",
+                "supportsAllDrives": "false",
+            },
+        )
+        return payload.get("files", [])
+
+    def find_folder(self, parent_id: str, folder_name: str) -> dict | None:
+        safe_name = folder_name.replace("'", "\\'")
+        query_string = (
+            f"mimeType='application/vnd.google-apps.folder' and trashed=false "
+            f"and name='{safe_name}' and '{parent_id}' in parents"
+        )
+        matches = self._search_files(query_string)
+        return matches[0] if matches else None
+
+    def create_folder(self, parent_id: str, folder_name: str) -> str:
+        payload = self._request(
+            "POST",
+            "https://www.googleapis.com/drive/v3/files",
+            query={"fields": "id"},
+            headers={"Content-Type": "application/json; charset=utf-8"},
+            body=json.dumps(
+                {
+                    "name": folder_name,
+                    "mimeType": "application/vnd.google-apps.folder",
+                    "parents": [parent_id],
+                }
+            ).encode("utf-8"),
+        )
+        return str(payload["id"])
+
+    def ensure_folder_path(self, folder_parts: list[str]) -> str:
+        current_parent = self.root_folder_id
+        for folder_name in folder_parts:
+            existing = self.find_folder(current_parent, folder_name)
+            current_parent = str(existing["id"]) if existing else self.create_folder(current_parent, folder_name)
+        return current_parent
+
+    def find_file(self, parent_id: str, file_name: str) -> dict | None:
+        safe_name = file_name.replace("'", "\\'")
+        query_string = f"trashed=false and name='{safe_name}' and '{parent_id}' in parents"
+        matches = self._search_files(query_string)
+        return matches[0] if matches else None
+
+    def _build_multipart_body(self, metadata: dict, content: bytes, mime_type: str) -> tuple[bytes, str]:
+        boundary = "prestesos-sync-boundary"
+        metadata_part = json.dumps(metadata, ensure_ascii=True).encode("utf-8")
+        body = (
+            f"--{boundary}\r\n"
+            "Content-Type: application/json; charset=UTF-8\r\n\r\n"
+        ).encode("utf-8")
+        body += metadata_part
+        body += (
+            f"\r\n--{boundary}\r\n"
+            f"Content-Type: {mime_type}\r\n\r\n"
+        ).encode("utf-8")
+        body += content
+        body += f"\r\n--{boundary}--\r\n".encode("utf-8")
+        return body, boundary
+
+    def upload_file(self, parent_id: str, file_name: str, local_path: Path) -> tuple[str, str]:
+        existing = self.find_file(parent_id, file_name)
+        metadata = {"name": file_name, "parents": [parent_id]}
+        content = local_path.read_bytes()
+        mime_type = mimetypes.guess_type(str(local_path))[0] or "application/octet-stream"
+        body, boundary = self._build_multipart_body(metadata, content, mime_type)
+        headers = {"Content-Type": f"multipart/related; boundary={boundary}"}
+
+        if existing:
+            payload = self._request(
+                "PATCH",
+                f"https://www.googleapis.com/upload/drive/v3/files/{existing['id']}",
+                query={"uploadType": "multipart", "fields": "id"},
+                headers=headers,
+                body=body,
+            )
+            return "updated", str(payload["id"])
+
+        payload = self._request(
+            "POST",
+            "https://www.googleapis.com/upload/drive/v3/files",
+            query={"uploadType": "multipart", "fields": "id"},
+            headers=headers,
+            body=body,
+        )
+        return "uploaded", str(payload["id"])
+
+
 class SyncService:
     """Responsabilidade: preparar o conjunto de arquivos para sincronizacao futura."""
 
@@ -88,6 +249,29 @@ class SyncService:
 
     def _google_drive_config(self) -> dict:
         return self.config.get("sync.google_drive", {}) or {}
+
+    def _google_drive_access_token(self) -> str | None:
+        google_drive = self._google_drive_config()
+        env_name = google_drive.get("access_token_env", "GOOGLE_DRIVE_ACCESS_TOKEN")
+        if not isinstance(env_name, str) or not env_name.strip():
+            return None
+        return os.environ.get(env_name.strip())
+
+    def _google_drive_root_folder_id(self) -> str:
+        google_drive = self._google_drive_config()
+        root_folder_id = google_drive.get("root_folder_id", "root")
+        return str(root_folder_id).strip() or "root"
+
+    def _build_google_drive_client(self) -> GoogleDriveClient:
+        access_token = self._google_drive_access_token()
+        if not access_token:
+            raise SyncConfigurationError(
+                "Configure a variavel de ambiente do token Google Drive antes de sincronizar."
+            )
+        return GoogleDriveClient(
+            access_token=access_token,
+            root_folder_id=self._google_drive_root_folder_id(),
+        )
 
     def _hash_file(self, path: Path) -> str:
         digest = hashlib.sha256()
@@ -248,3 +432,67 @@ class SyncService:
         )
 
         return SyncPreparation(manifest=manifest, upload_plan=upload_plan)
+
+    def upload_google_drive(self, upload_plan: SyncUploadPlan) -> SyncUploadResult:
+        client = self._build_google_drive_client()
+        items = []
+
+        self.bus.publish(
+            "sync.google_drive.upload.started",
+            "sync",
+            "Upload para Google Drive iniciado",
+            payload={"quantidade": len(upload_plan.items)},
+        )
+
+        for plan_item in upload_plan.items:
+            path_parts = [part for part in Path(plan_item.remote_path).parts if part not in {".", ""}]
+            folder_parts = path_parts[:-1]
+            parent_id = client.ensure_folder_path(folder_parts)
+            status, file_id = client.upload_file(parent_id, path_parts[-1], plan_item.local_path)
+            items.append(
+                SyncUploadItemResult(
+                    local_path=plan_item.local_path,
+                    remote_path=plan_item.remote_path,
+                    file_id=file_id,
+                    status=status,
+                )
+            )
+            self.bus.publish(
+                "sync.google_drive.file_uploaded",
+                "sync",
+                str(plan_item.local_path),
+                payload={"status": status, "file_id": file_id, "remote_path": plan_item.remote_path},
+            )
+
+        result = SyncUploadResult(
+            provider="google-drive",
+            uploaded_at=datetime.now().isoformat(timespec="seconds"),
+            uploaded_count=len(items),
+            items=items,
+        )
+
+        self.bus.publish(
+            "sync.google_drive.upload.completed",
+            "sync",
+            "Upload para Google Drive concluido",
+            payload={"quantidade": result.uploaded_count},
+        )
+        return result
+
+    def execute_sync(self) -> SyncExecution:
+        preparation = self.prepare_sync()
+        provider = self._provider()
+        upload_result = None
+
+        if provider == "google-drive" and preparation.upload_plan is not None:
+            if self._google_drive_access_token():
+                upload_result = self.upload_google_drive(preparation.upload_plan)
+            else:
+                self.bus.publish(
+                    "sync.google_drive.upload.pending_auth",
+                    "sync",
+                    "Upload pendente por falta de token",
+                    payload={"env": self._google_drive_config().get("access_token_env")},
+                )
+
+        return SyncExecution(preparation=preparation, upload_result=upload_result)

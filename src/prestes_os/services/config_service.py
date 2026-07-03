@@ -39,6 +39,8 @@ def build_default_config(base_dir: Path | None = None) -> dict:
                 "remote_root": "PrestesOS",
                 "credentials_path": str(base / "config" / "google_drive_credentials.json"),
                 "plan_file": str(base / "Sync" / "google_drive_upload_plan.json"),
+                "access_token_env": "GOOGLE_DRIVE_ACCESS_TOKEN",
+                "root_folder_id": "root",
             },
         },
     }
@@ -141,6 +143,14 @@ class ConfigService:
         remote_root = google_drive.get("remote_root")
         if not isinstance(remote_root, str) or not remote_root.strip():
             google_drive["remote_root"] = self.default_config["sync"]["google_drive"]["remote_root"]
+
+        access_token_env = google_drive.get("access_token_env")
+        if not isinstance(access_token_env, str) or not access_token_env.strip():
+            google_drive["access_token_env"] = self.default_config["sync"]["google_drive"]["access_token_env"]
+
+        root_folder_id = google_drive.get("root_folder_id")
+        if not isinstance(root_folder_id, str) or not root_folder_id.strip():
+            google_drive["root_folder_id"] = self.default_config["sync"]["google_drive"]["root_folder_id"]
 
         return data
 

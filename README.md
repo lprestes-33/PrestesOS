@@ -62,6 +62,13 @@ Preparacao de sincronizacao local:
 prestes sincronizar
 ```
 
+Sincronizacao real com Google Drive:
+
+```bash
+export GOOGLE_DRIVE_ACCESS_TOKEN="seu_token"
+prestes sincronizar
+```
+
 ## Estrutura
 
 ```text
@@ -147,7 +154,8 @@ Antes de alterar o projeto, leia nesta ordem:
 - o sistema gera manifesto JSON com arquivos preparados para sincronizacao;
 - transcricoes e resumos entram no manifesto automaticamente;
 - existe modo preparatorio para Google Drive com plano de upload e pasta remota configuravel;
-- o envio remoto ainda nao acontece nesta etapa.
+- o upload real pode ocorrer pela API do Google Drive quando `sync.provider=google-drive`;
+- o token de acesso e lido por variavel de ambiente para evitar segredo no YAML.
 
 ## Proximo objetivo
 
