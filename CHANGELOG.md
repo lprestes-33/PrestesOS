@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.10
+- `SyncService` adicionado para gerar manifesto local de sincronizacao.
+- Novo comando `prestes sincronizar`.
+- Testes adicionados para manifesto, logs opcionais e despacho da CLI.
+
 ## v0.3.9
 - Busca semantica offline inicial adicionada ao `SearchService`.
 - Novo comando `prestes buscar-semantico` para consulta conceitual local.

@@ -43,3 +43,13 @@ def test_config_service_replaces_invalid_critical_values(prestes_base_dir):
     assert data["audio"]["duracao_parte_minutos"] == 30
     assert data["audio"]["comando_whisper"] == "whisper-cli"
     assert data["audio"]["idioma"] == "pt"
+
+
+def test_config_service_keeps_sync_defaults(prestes_base_dir):
+    config = ConfigService(base_dir=prestes_base_dir)
+
+    data = config.load()
+
+    assert data["sync"]["provider"] == "local-manifest"
+    assert Path(data["sync"]["manifest_dir"]) == prestes_base_dir / "Sync"
+    assert data["sync"]["include_logs"] is False

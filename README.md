@@ -56,6 +56,12 @@ Busca semantica local:
 prestes buscar-semantico jurisdicao
 ```
 
+Preparacao de sincronizacao local:
+
+```bash
+prestes sincronizar
+```
+
 ## Estrutura
 
 ```text
@@ -134,6 +140,13 @@ Antes de alterar o projeto, leia nesta ordem:
 - a indexacao ocorre por arquivo e preserva caminho e tipo da fonte;
 - a CLI suporta busca direta com `prestes buscar`;
 - existe busca semantica offline leve com expansao local de conceitos.
+
+## Estado atual da sincronizacao
+
+- existe `SyncService` em modo local-first;
+- o sistema gera manifesto JSON com arquivos preparados para sincronizacao;
+- transcricoes e resumos entram no manifesto automaticamente;
+- o envio remoto ainda nao acontece nesta etapa.
 
 ## Proximo objetivo
 

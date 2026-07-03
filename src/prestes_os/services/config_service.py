@@ -31,6 +31,11 @@ def build_default_config(base_dir: Path | None = None) -> dict:
             "openai_model": "gpt-4.1-mini",
             "resumos_dir": str(base / "Resumos"),
         },
+        "sync": {
+            "provider": "local-manifest",
+            "manifest_dir": str(base / "Sync"),
+            "include_logs": False,
+        },
     }
 
 
@@ -78,6 +83,7 @@ class ConfigService:
             ("database", "path"),
             ("logs", "path"),
             ("ai", "resumos_dir"),
+            ("sync", "manifest_dir"),
         ):
             section_data = data.get(section, {})
             if key in section_data:
@@ -110,6 +116,15 @@ class ConfigService:
         model = ai.get("openai_model")
         if not isinstance(model, str) or not model.strip():
             ai["openai_model"] = self.default_config["ai"]["openai_model"]
+
+        sync = data["sync"]
+        provider = sync.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            sync["provider"] = self.default_config["sync"]["provider"]
+
+        include_logs = sync.get("include_logs")
+        if not isinstance(include_logs, bool):
+            sync["include_logs"] = self.default_config["sync"]["include_logs"]
 
         return data
 

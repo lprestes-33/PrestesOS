@@ -19,3 +19,5 @@
 7. [x] Integracao futura com OpenAI via variavel de ambiente.
 8. [x] Busca textual local.
 9. [x] Busca semantica.
+10. [x] Sync local-first com manifesto.
+11. [ ] Integracao futura com Google Drive.

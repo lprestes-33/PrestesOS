@@ -12,6 +12,7 @@ from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
 from prestes_os.services.log_service import LogService
 from prestes_os.services.search_service import SearchService
+from prestes_os.services.sync_service import SyncService
 from prestes_os.services.transcription_service import TranscriptionService
 
 console = Console()
@@ -41,6 +42,7 @@ def build_parser():
     search_parser.add_argument("consulta", help="Texto a buscar.")
     semantic_parser = subparsers.add_parser("buscar-semantico", help="Busca semantica local nos conteudos indexados.")
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
+    subparsers.add_parser("sincronizar", help="Gera manifesto local para sincronizacao futura.")
     return parser
 
 
@@ -121,6 +123,12 @@ def executar_busca_semantica(consulta):
         console.print(result.snippet)
 
 
+def executar_preparacao_sync():
+    result = SyncService().build_manifest()
+    console.print(f"[green]Manifesto gerado:[/green] {result.manifest_file}")
+    console.print(f"[green]Arquivos preparados:[/green] {len(result.items)}")
+
+
 def executar_menu():
     db = DatabaseService()
     bus = EventBus()
@@ -147,6 +155,7 @@ def executar_menu():
     table.add_row("7", "Resumo IA")
     table.add_row("8", "Buscar")
     table.add_row("9", "Buscar Semantico")
+    table.add_row("10", "Sincronizar")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -176,6 +185,8 @@ def executar_menu():
     elif option == "9":
         consulta = console.input("Consulta semantica: ").strip()
         executar_busca_semantica(consulta)
+    elif option == "10":
+        executar_preparacao_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
     else:
@@ -200,6 +211,9 @@ def main(argv=None):
         return
     if args.command == "buscar-semantico":
         executar_busca_semantica(args.consulta)
+        return
+    if args.command == "sincronizar":
+        executar_preparacao_sync()
         return
 
     executar_menu()

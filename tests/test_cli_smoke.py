@@ -99,3 +99,17 @@ def test_direct_semantic_search_command_dispatches_to_service(monkeypatch):
     main_module.main(["buscar-semantico", "jurisdicao"])
 
     assert calls == ["jurisdicao"]
+
+
+def test_direct_sync_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_preparacao_sync",
+        lambda: calls.append("sync"),
+    )
+
+    main_module.main(["sincronizar"])
+
+    assert calls == ["sync"]
