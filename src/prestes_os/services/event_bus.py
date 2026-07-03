@@ -19,7 +19,12 @@ class EventBus:
 
     def publish(self, event_type, origem="", descricao="", payload=None):
         self.db.add_event(event_type, origem, descricao)
-        self.log.info(f"EVENT {event_type} | {origem} | {descricao}")
+        self.log.info(
+            descricao or event_type,
+            source=origem or "event_bus",
+            event_type=event_type,
+            context=payload or {},
+        )
 
         for callback in self.listeners.get(event_type, []):
             callback(payload or {})

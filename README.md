@@ -68,6 +68,12 @@ Antes de alterar o projeto, leia nesta ordem:
 - CLI/TUI apenas aciona services.
 - Toda alteracao relevante deve incluir testes, documentacao e atualizacao do changelog.
 
+## Estado atual dos logs
+
+- cada operacao relevante gera uma linha JSON no arquivo `prestes.log`;
+- os campos padrao incluem `timestamp`, `level`, `message`, `source`, `event_type` e `context`;
+- eventos publicados no `EventBus` tambem sao refletidos no log estruturado.
+
 ## Estado atual do audio
 
 - cria pasta por data no formato `ddmmaaaa`;

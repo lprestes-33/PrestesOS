@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.4
+- Logs estruturados em JSON por linha adicionados ao `LogService`.
+- `EventBus` passou a registrar `source`, `event_type` e `context` no log.
+- Testes atualizados para validar o formato estruturado dos logs.
+
 ## v0.3.3
 - Primeira versao do TranscriptionService adicionada.
 - Preparacao da gravacao mais recente para transcricao via `prestes transcrever`.

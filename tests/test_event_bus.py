@@ -20,3 +20,6 @@ def test_event_bus_persists_event_and_notifies_listener(database_service, log_se
     assert rows[0][1] == "recording.started"
     assert rows[0][2] == "audio"
     assert rows[0][3] == "gravacao iniciada"
+    log_line = log_service.log_file.read_text(encoding="utf-8").strip()
+    assert '"event_type": "recording.started"' in log_line
+    assert '"source": "audio"' in log_line
