@@ -1,2 +1,0 @@
-[console_scripts]
-prestes = prestes_os.core.main:main
