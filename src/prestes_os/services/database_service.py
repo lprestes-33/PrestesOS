@@ -171,6 +171,18 @@ class DatabaseService:
     def search_documents(self, query, limit=10):
         conn = self.connect()
         cur = conn.cursor()
+        if query == "":
+            rows = cur.execute(
+                """
+                SELECT id, source_type, source_path, title, content, metadata, atualizado_em
+                FROM search_index
+                ORDER BY atualizado_em DESC, id DESC
+                LIMIT ?
+                """,
+                (limit,),
+            ).fetchall()
+            conn.close()
+            return rows
         pattern = f"%{query}%"
         rows = cur.execute(
             """

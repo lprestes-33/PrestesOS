@@ -59,3 +59,17 @@ def test_search_service_rejects_empty_query(prestes_base_dir, database_service, 
         assert "termo nao vazio" in str(exc)
     else:
         raise AssertionError("Era esperado falhar com consulta vazia.")
+
+
+def test_search_service_returns_semantic_results(prestes_base_dir, database_service, log_service):
+    create_search_fixture(prestes_base_dir)
+    config = ConfigService(base_dir=prestes_base_dir)
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SearchService(config_service=config, database_service=database_service, event_bus=bus)
+    service.reindex_documents()
+
+    results = service.semantic_search("jurisdicao processual")
+
+    assert results
+    assert any(result.score > 0 for result in results)
+    assert any("processo" in result.snippet.lower() or "competencia" in result.snippet.lower() for result in results)

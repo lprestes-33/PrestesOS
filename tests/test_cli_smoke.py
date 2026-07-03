@@ -85,3 +85,17 @@ def test_direct_search_command_dispatches_to_service(monkeypatch):
     main_module.main(["buscar", "competencia"])
 
     assert calls == ["competencia"]
+
+
+def test_direct_semantic_search_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_busca_semantica",
+        lambda consulta: calls.append(consulta),
+    )
+
+    main_module.main(["buscar-semantico", "jurisdicao"])
+
+    assert calls == ["jurisdicao"]

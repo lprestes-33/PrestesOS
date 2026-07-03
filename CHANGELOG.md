@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.9
+- Busca semantica offline inicial adicionada ao `SearchService`.
+- Novo comando `prestes buscar-semantico` para consulta conceitual local.
+- Testes adicionados para busca semantica e despacho da CLI.
+
 ## v0.3.8
 - `SearchService` adicionado para indexacao e busca textual local em SQLite.
 - Novo comando `prestes buscar` para consulta textual em transcricoes e resumos.

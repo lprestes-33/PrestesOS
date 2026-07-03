@@ -50,6 +50,12 @@ Busca textual local:
 prestes buscar competencia
 ```
 
+Busca semantica local:
+
+```bash
+prestes buscar-semantico jurisdicao
+```
+
 ## Estrutura
 
 ```text
@@ -126,7 +132,8 @@ Antes de alterar o projeto, leia nesta ordem:
 - existe busca textual local em SQLite;
 - transcricoes consolidadas e resumos podem ser indexados;
 - a indexacao ocorre por arquivo e preserva caminho e tipo da fonte;
-- a CLI suporta busca direta com `prestes buscar`.
+- a CLI suporta busca direta com `prestes buscar`;
+- existe busca semantica offline leve com expansao local de conceitos.
 
 ## Proximo objetivo
 
