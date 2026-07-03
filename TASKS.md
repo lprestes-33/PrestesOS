@@ -1,0 +1,16 @@
+# TASKS.md - Backlog Atual
+
+## Sprint atual
+
+1. [x] Integrar Kit de Governanca.
+2. [x] Garantir que `AGENTS.md` seja lido por agentes.
+3. [x] Atualizar README com fluxo de desenvolvimento.
+4. [x] Criar testes iniciais.
+5. [ ] Consolidar AudioService.
+
+## Proxima Sprint
+
+1. [ ] TranscriptionService.
+2. [ ] Registro completo no SQLite.
+3. [ ] Logs estruturados.
+4. [ ] Configuracao por YAML.

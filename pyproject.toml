@@ -1,0 +1,22 @@
+[project]
+name = "prestes-os"
+version = "0.3.0"
+description = "Sistema operacional pessoal de conhecimento, automação e IA."
+requires-python = ">=3.11"
+dependencies = [
+    "rich",
+    "pyyaml"
+]
+
+[project.scripts]
+prestes = "prestes_os.core.main:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
