@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.6
+- `AIService` offline-first adicionado para gerar resumos da transcricao consolidada mais recente.
+- Novo comando `prestes resumir` para gerar resumo por tipo.
+- Configuracao preparada para futura integracao com OpenAI sem uso obrigatorio de rede.
+- Testes adicionados para fluxo offline de IA e despacho da CLI.
+
 ## v0.3.5
 - `ConfigService` tornou-se mais robusto com merge de defaults e autocorrecao de configuracao.
 - Caminhos principais da configuracao passaram a ser normalizados com `pathlib`.

@@ -57,3 +57,17 @@ def test_direct_transcription_command_dispatches_to_service(monkeypatch):
     main_module.main(["transcrever"])
 
     assert calls == ["transcrever"]
+
+
+def test_direct_ai_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_resumo_ia",
+        lambda tipo=None: calls.append(tipo),
+    )
+
+    main_module.main(["resumir", "--tipo", "Aula"])
+
+    assert calls == ["Aula"]

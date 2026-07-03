@@ -38,6 +38,12 @@ Preparacao da gravacao mais recente para transcricao:
 prestes transcrever
 ```
 
+Resumo offline da transcricao mais recente:
+
+```bash
+prestes resumir --tipo Aula
+```
+
 ## Estrutura
 
 ```text
@@ -99,6 +105,14 @@ Antes de alterar o projeto, leia nesta ordem:
 - registra textos no SQLite quando `recording_id` estiver presente no `metadata.txt`;
 - publica eventos de preparacao, conversao e transcricao;
 - suporta comando direto `prestes transcrever`.
+
+## Estado atual da IA
+
+- existe `AIService` em modo `offline`;
+- consome a transcricao consolidada mais recente;
+- detecta o tipo pelo `metadata.txt` ou aceita tipo explicito;
+- gera resumo em arquivo na pasta `Resumos`;
+- preserva gancho futuro para modo `openai`.
 
 ## Proximo objetivo
 

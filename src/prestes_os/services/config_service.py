@@ -25,6 +25,12 @@ def build_default_config(base_dir: Path | None = None) -> dict:
         "logs": {
             "path": str(base / "logs" / "prestes.log"),
         },
+        "ai": {
+            "mode": "offline",
+            "provider": "local-placeholder",
+            "openai_model": "gpt-4.1-mini",
+            "resumos_dir": str(base / "Resumos"),
+        },
     }
 
 
@@ -71,6 +77,7 @@ class ConfigService:
             ("audio", "modelo_whisper"),
             ("database", "path"),
             ("logs", "path"),
+            ("ai", "resumos_dir"),
         ):
             section_data = data.get(section, {})
             if key in section_data:
@@ -90,6 +97,19 @@ class ConfigService:
         language = audio.get("idioma")
         if not isinstance(language, str) or not language.strip():
             audio["idioma"] = self.default_config["audio"]["idioma"]
+
+        ai = data["ai"]
+        mode = ai.get("mode")
+        if mode not in {"offline", "openai"}:
+            ai["mode"] = self.default_config["ai"]["mode"]
+
+        provider = ai.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            ai["provider"] = self.default_config["ai"]["provider"]
+
+        model = ai.get("openai_model")
+        if not isinstance(model, str) or not model.strip():
+            ai["openai_model"] = self.default_config["ai"]["openai_model"]
 
         return data
 
