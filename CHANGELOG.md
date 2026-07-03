@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.3.5
+- `ConfigService` tornou-se mais robusto com merge de defaults e autocorrecao de configuracao.
+- Caminhos principais da configuracao passaram a ser normalizados com `pathlib`.
+- Testes adicionados para criacao, merge e validacao do YAML.
+
 ## v0.3.4
 - Logs estruturados em JSON por linha adicionados ao `LogService`.
 - `EventBus` passou a registrar `source`, `event_type` e `context` no log.

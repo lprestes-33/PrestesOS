@@ -14,4 +14,4 @@
 2. [x] Integrar Whisper.cpp, TXT, SRT, JSON e consolidacao final.
 3. [x] Registro completo no SQLite.
 4. [x] Logs estruturados.
-5. [ ] Configuracao por YAML.
+5. [x] Configuracao por YAML.

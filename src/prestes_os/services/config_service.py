@@ -28,6 +28,23 @@ def build_default_config(base_dir: Path | None = None) -> dict:
     }
 
 
+def merge_dicts(defaults: dict, data: dict | None) -> dict:
+    merged = {}
+    source = data if isinstance(data, dict) else {}
+    for key, default_value in defaults.items():
+        source_value = source.get(key)
+        if isinstance(default_value, dict):
+            merged[key] = merge_dicts(default_value, source_value)
+        elif source_value is None:
+            merged[key] = default_value
+        else:
+            merged[key] = source_value
+    for key, value in source.items():
+        if key not in merged:
+            merged[key] = value
+    return merged
+
+
 class ConfigService:
     """Responsabilidade: persistir e expor a configuracao central do PrestesOS."""
 
@@ -44,13 +61,55 @@ class ConfigService:
         if not self.config_path.exists():
             self.save(self.default_config)
 
+    def _normalize_paths(self, data: dict) -> dict:
+        base_dir = Path(data.get("base_dir", self.base_dir)).expanduser()
+        data["base_dir"] = str(base_dir)
+
+        for section, key in (
+            ("audio", "gravacoes_dir"),
+            ("audio", "transcricoes_dir"),
+            ("audio", "modelo_whisper"),
+            ("database", "path"),
+            ("logs", "path"),
+        ):
+            section_data = data.get(section, {})
+            if key in section_data:
+                section_data[key] = str(Path(section_data[key]).expanduser())
+        return data
+
+    def _validate(self, data: dict) -> dict:
+        audio = data["audio"]
+        duration = audio.get("duracao_parte_minutos", 30)
+        if not isinstance(duration, int) or duration <= 0:
+            audio["duracao_parte_minutos"] = self.default_config["audio"]["duracao_parte_minutos"]
+
+        command = audio.get("comando_whisper")
+        if not isinstance(command, str) or not command.strip():
+            audio["comando_whisper"] = self.default_config["audio"]["comando_whisper"]
+
+        language = audio.get("idioma")
+        if not isinstance(language, str) or not language.strip():
+            audio["idioma"] = self.default_config["audio"]["idioma"]
+
+        return data
+
     def load(self):
         with self.config_path.open("r", encoding="utf-8") as file_handle:
-            return yaml.safe_load(file_handle)
+            raw_data = yaml.safe_load(file_handle) or {}
+
+        merged = merge_dicts(self.default_config, raw_data)
+        normalized = self._normalize_paths(merged)
+        validated = self._validate(normalized)
+
+        if validated != raw_data:
+            self.save(validated)
+
+        return validated
 
     def save(self, data):
+        prepared = self._validate(self._normalize_paths(merge_dicts(self.default_config, data)))
         with self.config_path.open("w", encoding="utf-8") as file_handle:
-            yaml.safe_dump(data, file_handle, allow_unicode=True, sort_keys=False)
+            yaml.safe_dump(prepared, file_handle, allow_unicode=True, sort_keys=False)
 
     def get(self, key, default=None):
         data = self.load()

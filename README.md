@@ -74,6 +74,13 @@ Antes de alterar o projeto, leia nesta ordem:
 - os campos padrao incluem `timestamp`, `level`, `message`, `source`, `event_type` e `context`;
 - eventos publicados no `EventBus` tambem sao refletidos no log estruturado.
 
+## Estado atual da configuracao
+
+- a configuracao continua centralizada em `config/config.yaml`;
+- chaves ausentes sao recompostas automaticamente a partir dos defaults;
+- caminhos principais sao normalizados com `pathlib`;
+- valores criticos invalidos sao corrigidos para defaults seguros.
+
 ## Estado atual do audio
 
 - cria pasta por data no formato `ddmmaaaa`;
