@@ -52,6 +52,7 @@ def test_config_service_keeps_sync_defaults(prestes_base_dir):
 
     assert data["sync"]["provider"] == "local-manifest"
     assert Path(data["sync"]["manifest_dir"]) == prestes_base_dir / "Sync"
+    assert Path(data["sync"]["state_file"]) == prestes_base_dir / "Sync" / "sync_state.json"
     assert data["sync"]["include_logs"] is False
     assert data["sync"]["google_drive"]["remote_root"] == "PrestesOS"
     assert Path(data["sync"]["google_drive"]["credentials_path"]) == prestes_base_dir / "config" / "google_drive_credentials.json"

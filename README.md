@@ -155,6 +155,7 @@ Antes de alterar o projeto, leia nesta ordem:
 - transcricoes e resumos entram no manifesto automaticamente;
 - existe modo preparatorio para Google Drive com plano de upload e pasta remota configuravel;
 - o upload real pode ocorrer pela API do Google Drive quando `sync.provider=google-drive`;
+- o estado de sincronizacao e persistido localmente para evitar reenvio de arquivos inalterados;
 - o token de acesso e lido por variavel de ambiente para evitar segredo no YAML.
 
 ## Proximo objetivo

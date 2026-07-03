@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.13
+- Estado incremental de sincronizacao adicionado em arquivo local JSON.
+- `SyncService` passou a ignorar arquivos ja enviados sem alteracao de hash ou destino remoto.
+- CLI de sincronizacao passou a informar arquivos ignorados e reaproveitados.
+- Testes adicionados para persistencia e reaproveitamento de estado em execucoes consecutivas.
+
 ## v0.3.12
 - Upload real para Google Drive adicionado via API HTTP com token Bearer em variavel de ambiente.
 - `SyncService` passou a executar sincronizacao completa quando `sync.provider=google-drive`.

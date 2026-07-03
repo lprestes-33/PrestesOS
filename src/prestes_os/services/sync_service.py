@@ -54,6 +54,7 @@ class SyncUploadPlan:
     credentials_path: Path
     credentials_configured: bool
     items: list[SyncPlanItem]
+    skipped_items: list[SyncPlanItem]
 
 
 @dataclass
@@ -81,6 +82,7 @@ class SyncUploadResult:
     provider: str
     uploaded_at: str
     uploaded_count: int
+    skipped_count: int
     items: list[SyncUploadItemResult]
 
 
@@ -90,6 +92,16 @@ class SyncExecution:
 
     preparation: SyncPreparation
     upload_result: SyncUploadResult | None
+
+
+@dataclass
+class SyncStateEntry:
+    """Responsabilidade: representar o estado persistido de um arquivo sincronizado."""
+
+    sha256: str
+    remote_path: str
+    file_id: str
+    synced_at: str
 
 
 class SyncConfigurationError(RuntimeError):
@@ -247,6 +259,9 @@ class SyncService:
     def _provider(self) -> str:
         return self.config.get("sync.provider", "local-manifest")
 
+    def _sync_state_file(self) -> Path:
+        return Path(self.config.get("sync.state_file")).expanduser()
+
     def _google_drive_config(self) -> dict:
         return self.config.get("sync.google_drive", {}) or {}
 
@@ -279,6 +294,51 @@ class SyncService:
             for chunk in iter(lambda: file_handle.read(8192), b""):
                 digest.update(chunk)
         return digest.hexdigest()
+
+    def _load_sync_state(self) -> dict[str, SyncStateEntry]:
+        state_file = self._sync_state_file()
+        if not state_file.exists():
+            return {}
+
+        payload = json.loads(state_file.read_text(encoding="utf-8"))
+        entries = payload.get("entries", {})
+        state = {}
+        for relative_path, raw_entry in entries.items():
+            state[relative_path] = SyncStateEntry(
+                sha256=str(raw_entry.get("sha256", "")),
+                remote_path=str(raw_entry.get("remote_path", "")),
+                file_id=str(raw_entry.get("file_id", "")),
+                synced_at=str(raw_entry.get("synced_at", "")),
+            )
+        return state
+
+    def _save_sync_state(self, state: dict[str, SyncStateEntry]) -> None:
+        state_file = self._sync_state_file()
+        state_file.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+            "entries": {
+                relative_path: {
+                    "sha256": entry.sha256,
+                    "remote_path": entry.remote_path,
+                    "file_id": entry.file_id,
+                    "synced_at": entry.synced_at,
+                }
+                for relative_path, entry in sorted(state.items())
+            },
+        }
+        state_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
+
+    def _is_item_synced(self, plan_item: SyncPlanItem, state: dict[str, SyncStateEntry]) -> bool:
+        relative_key = str(plan_item.local_path.relative_to(self._base_dir()))
+        current_entry = state.get(relative_key)
+        if current_entry is None:
+            return False
+        return (
+            current_entry.sha256 == plan_item.sha256
+            and current_entry.remote_path == plan_item.remote_path
+            and bool(current_entry.file_id)
+        )
 
     def _collect_files(self) -> list[tuple[str, Path]]:
         collected = []
@@ -378,6 +438,9 @@ class SyncService:
             )
             for item in current_manifest.items
         ]
+        state = self._load_sync_state()
+        pending_items = [item for item in items if not self._is_item_synced(item, state)]
+        skipped_items = [item for item in items if self._is_item_synced(item, state)]
 
         payload = {
             "provider": "google-drive",
@@ -386,6 +449,8 @@ class SyncService:
             "credentials_path": str(credentials_path),
             "credentials_configured": credentials_path.exists(),
             "manifest_file": str(current_manifest.manifest_file),
+            "pending_count": len(pending_items),
+            "skipped_count": len(skipped_items),
             "items": [
                 {
                     "category": item.category,
@@ -394,7 +459,17 @@ class SyncService:
                     "size_bytes": item.size_bytes,
                     "sha256": item.sha256,
                 }
-                for item in items
+                for item in pending_items
+            ],
+            "skipped_items": [
+                {
+                    "category": item.category,
+                    "local_path": str(item.local_path),
+                    "remote_path": item.remote_path,
+                    "size_bytes": item.size_bytes,
+                    "sha256": item.sha256,
+                }
+                for item in skipped_items
             ],
         }
         plan_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
@@ -403,7 +478,7 @@ class SyncService:
             "sync.google_drive.plan.generated",
             "sync",
             str(plan_file),
-            payload={"provider": "google-drive", "quantidade": len(items)},
+            payload={"provider": "google-drive", "quantidade": len(pending_items), "ignorados": len(skipped_items)},
         )
 
         return SyncUploadPlan(
@@ -413,7 +488,8 @@ class SyncService:
             remote_root=remote_root,
             credentials_path=credentials_path,
             credentials_configured=credentials_path.exists(),
-            items=items,
+            items=pending_items,
+            skipped_items=skipped_items,
         )
 
     def prepare_sync(self) -> SyncPreparation:
@@ -436,6 +512,7 @@ class SyncService:
     def upload_google_drive(self, upload_plan: SyncUploadPlan) -> SyncUploadResult:
         client = self._build_google_drive_client()
         items = []
+        state = self._load_sync_state()
 
         self.bus.publish(
             "sync.google_drive.upload.started",
@@ -457,6 +534,12 @@ class SyncService:
                     status=status,
                 )
             )
+            state[str(plan_item.local_path.relative_to(self._base_dir()))] = SyncStateEntry(
+                sha256=plan_item.sha256,
+                remote_path=plan_item.remote_path,
+                file_id=file_id,
+                synced_at=datetime.now().isoformat(timespec="seconds"),
+            )
             self.bus.publish(
                 "sync.google_drive.file_uploaded",
                 "sync",
@@ -464,10 +547,12 @@ class SyncService:
                 payload={"status": status, "file_id": file_id, "remote_path": plan_item.remote_path},
             )
 
+        self._save_sync_state(state)
         result = SyncUploadResult(
             provider="google-drive",
             uploaded_at=datetime.now().isoformat(timespec="seconds"),
             uploaded_count=len(items),
+            skipped_count=len(upload_plan.skipped_items),
             items=items,
         )
 
@@ -475,7 +560,7 @@ class SyncService:
             "sync.google_drive.upload.completed",
             "sync",
             "Upload para Google Drive concluido",
-            payload={"quantidade": result.uploaded_count},
+            payload={"quantidade": result.uploaded_count, "ignorados": result.skipped_count},
         )
         return result
 

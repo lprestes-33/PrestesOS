@@ -34,6 +34,7 @@ def build_default_config(base_dir: Path | None = None) -> dict:
         "sync": {
             "provider": "local-manifest",
             "manifest_dir": str(base / "Sync"),
+            "state_file": str(base / "Sync" / "sync_state.json"),
             "include_logs": False,
             "google_drive": {
                 "remote_root": "PrestesOS",
@@ -91,6 +92,7 @@ class ConfigService:
             ("logs", "path"),
             ("ai", "resumos_dir"),
             ("sync", "manifest_dir"),
+            ("sync", "state_file"),
             ("sync.google_drive", "credentials_path"),
             ("sync.google_drive", "plan_file"),
         ):
