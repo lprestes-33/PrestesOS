@@ -20,8 +20,16 @@ pip install -e .
 
 ## Executar
 
+Menu interativo:
+
 ```bash
 prestes
+```
+
+Gravacao direta:
+
+```bash
+prestes gravar --tipo Aula --titulo "Direito Constitucional"
 ```
 
 ## Estrutura
@@ -53,6 +61,14 @@ Antes de alterar o projeto, leia nesta ordem:
 - Services concentram regra de negocio.
 - CLI/TUI apenas aciona services.
 - Toda alteracao relevante deve incluir testes, documentacao e atualizacao do changelog.
+
+## Estado atual do audio
+
+- cria pasta por data no formato `ddmmaaaa`;
+- gera `metadata.txt` da sessao;
+- registra gravacao no SQLite;
+- publica eventos de inicio, parte, conclusao e falha;
+- suporta comando direto `prestes gravar`.
 
 ## Proximo objetivo
 

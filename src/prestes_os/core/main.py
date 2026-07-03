@@ -1,22 +1,42 @@
+import argparse
+import sys
+
 from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
+from prestes_os.audio.audio_service import AudioService
+from prestes_os.services.config_service import ConfigService
 from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
-from prestes_os.services.config_service import ConfigService
 from prestes_os.services.log_service import LogService
 
 console = Console()
 
+
+def build_parser():
+    parser = argparse.ArgumentParser(prog="prestes", add_help=True)
+    subparsers = parser.add_subparsers(dest="command")
+
+    record_parser = subparsers.add_parser("gravar", help="Inicia uma gravacao de audio.")
+    record_parser.add_argument(
+        "--tipo",
+        default="Outro",
+        choices=["Aula", "Reuniao", "Conversa", "Outro"],
+        help="Tipo da gravacao.",
+    )
+    record_parser.add_argument("--titulo", default=None, help="Titulo da gravacao.")
+    return parser
+
+
 def mostrar_eventos(db):
     rows = db.last_events(10)
 
-    table = Table(title="Últimos eventos")
+    table = Table(title="Ultimos eventos")
     table.add_column("ID")
     table.add_column("Tipo")
     table.add_column("Origem")
-    table.add_column("Descrição")
+    table.add_column("Descricao")
     table.add_column("Criado em")
 
     for row in rows:
@@ -24,19 +44,27 @@ def mostrar_eventos(db):
 
     console.print(table)
 
-def selecionar_tipo():
-    console.print(Panel.fit(
-        "Tipo de gravação\n\n"
-        "1 Aula\n"
-        "2 Reunião\n"
-        "3 Conversa\n"
-        "4 Outro",
-        border_style="cyan"
-    ))
-    op = console.input("Escolha: ").strip()
-    return {"1": "Aula", "2": "Reuniao", "3": "Conversa", "4": "Outro"}.get(op, "Outro")
 
-def main():
+def selecionar_tipo():
+    console.print(
+        Panel.fit(
+            "Tipo de gravacao\n\n"
+            "1 Aula\n"
+            "2 Reuniao\n"
+            "3 Conversa\n"
+            "4 Outro",
+            border_style="cyan",
+        )
+    )
+    option = console.input("Escolha: ").strip()
+    return {"1": "Aula", "2": "Reuniao", "3": "Conversa", "4": "Outro"}.get(option, "Outro")
+
+
+def executar_gravacao_direta(tipo="Outro", titulo=None):
+    AudioService().record(tipo=tipo, titulo=titulo)
+
+
+def executar_menu():
     db = DatabaseService()
     bus = EventBus()
     cfg = ConfigService()
@@ -45,53 +73,56 @@ def main():
     bus.publish("sistema.iniciado", "kernel", "PrestesOS iniciado")
 
     console.clear()
-    console.print(Panel.fit(
-        "[bold cyan]PRESTES OS v0.3[/bold cyan]\nPrestes Kernel • Plataforma Pessoal de Conhecimento",
-        border_style="cyan"
-    ))
+    console.print(
+        Panel.fit(
+            "[bold cyan]PRESTES OS v0.3[/bold cyan]\nPrestes Kernel • Plataforma Pessoal de Conhecimento",
+            border_style="cyan",
+        )
+    )
 
     table = Table(show_header=False)
-    table.add_row("1", "🎙 Gravar")
-    table.add_row("2", "📝 Transcrever")
-    table.add_row("3", "🗄 Banco de dados")
-    table.add_row("4", "📜 Eventos")
-    table.add_row("5", "⚙ Configuração")
-    table.add_row("6", "📄 Logs")
+    table.add_row("1", "Gravar")
+    table.add_row("2", "Transcrever")
+    table.add_row("3", "Banco de dados")
+    table.add_row("4", "Eventos")
+    table.add_row("5", "Configuracao")
+    table.add_row("6", "Logs")
     table.add_row("0", "Sair")
     console.print(table)
 
-    op = console.input("\n[bold cyan]Escolha:[/bold cyan] ")
+    option = console.input("\n[bold cyan]Escolha:[/bold cyan] ")
 
-    if op == "1":
-        from prestes_os.audio.audio_service import AudioService
+    if option == "1":
         tipo = selecionar_tipo()
-        titulo = console.input("Título ENTER para automático: ").strip() or None
-        AudioService().record(tipo=tipo, titulo=titulo)
-
-    elif op == "2":
-        console.print("[yellow]TranscriptionService será implementado na próxima sprint.[/yellow]")
-
-    elif op == "3":
+        titulo = console.input("Titulo ENTER para automatico: ").strip() or None
+        executar_gravacao_direta(tipo=tipo, titulo=titulo)
+    elif option == "2":
+        console.print("[yellow]TranscriptionService sera implementado na proxima sprint.[/yellow]")
+    elif option == "3":
         console.print("[green]Banco SQLite ativo em ~/PrestesOS/database/prestes.db[/green]")
-
-    elif op == "4":
+    elif option == "4":
         mostrar_eventos(db)
-
-    elif op == "5":
+    elif option == "5":
         console.print(cfg.load())
-
-    elif op == "6":
+    elif option == "6":
         log_path = cfg.get("logs.path")
         console.print(f"[green]Log:[/green] {log_path}")
-        import os
-        os.system(f'tail -30 "{log_path}" 2>/dev/null')
+    elif option == "0":
+        bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
+    else:
+        console.print("[yellow]Opcao invalida.[/yellow]")
 
-    elif op == "0":
-        bus.publish("sistema.encerrado", "kernel", "Usuário saiu do PrestesOS")
+
+def main(argv=None):
+    parser = build_parser()
+    args = parser.parse_args(argv or [])
+
+    if args.command == "gravar":
+        executar_gravacao_direta(tipo=args.tipo, titulo=args.titulo)
         return
 
-    else:
-        console.print("[yellow]Opção inválida.[/yellow]")
+    executar_menu()
+
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

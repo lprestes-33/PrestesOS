@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.2
+- AudioService consolidado com fluxo testavel e tolerancia a falhas.
+- Registro de gravacoes no SQLite com atualizacao de status.
+- Eventos de audio ampliados para inicio, parte, conclusao, interrupcao e falha.
+- CLI passou a aceitar `prestes gravar --tipo ... --titulo ...`.
+- Testes adicionados para AudioService, gravacoes no banco e comando direto da CLI.
+
 ## v0.3.1
 - Integracao do Kit de Governanca ao repositorio.
 - Inclusao de `AGENTS.md`, `MASTER_SPEC.md`, `README_GOVERNANCE.md` e da pasta `.ai/`.

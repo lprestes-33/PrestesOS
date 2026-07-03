@@ -80,3 +80,35 @@ class DatabaseService:
         ).fetchall()
         conn.close()
         return rows
+
+    def create_recording(self, tipo, titulo, pasta, status="criada"):
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO gravacoes (tipo, titulo, pasta, status) VALUES (?, ?, ?, ?)",
+            (tipo, titulo, str(pasta), status),
+        )
+        recording_id = cur.lastrowid
+        conn.commit()
+        conn.close()
+        return recording_id
+
+    def update_recording_status(self, recording_id, status):
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE gravacoes SET status = ? WHERE id = ?",
+            (status, recording_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def get_recording(self, recording_id):
+        conn = self.connect()
+        cur = conn.cursor()
+        row = cur.execute(
+            "SELECT id, tipo, titulo, pasta, criado_em, status FROM gravacoes WHERE id = ?",
+            (recording_id,),
+        ).fetchone()
+        conn.close()
+        return row

@@ -21,7 +21,7 @@ def test_main_starts_and_exits_cleanly(monkeypatch, tmp_path):
     monkeypatch.setattr(main_module.console, "print", lambda *args, **kwargs: None)
     monkeypatch.setattr(main_module.console, "input", lambda *args, **kwargs: "0")
 
-    main_module.main()
+    main_module.main([])
 
     db = database_service.DatabaseService(db_path=prestes_base / "database" / "prestes.db")
     rows = db.last_events(2)
@@ -29,3 +29,17 @@ def test_main_starts_and_exits_cleanly(monkeypatch, tmp_path):
     assert (prestes_base / "database" / "prestes.db").exists()
     assert rows[0][1] == "sistema.encerrado"
     assert rows[1][1] == "sistema.iniciado"
+
+
+def test_direct_record_command_dispatches_to_audio_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_gravacao_direta",
+        lambda tipo, titulo: calls.append((tipo, titulo)),
+    )
+
+    main_module.main(["gravar", "--tipo", "Conversa", "--titulo", "Revisao"])
+
+    assert calls == [("Conversa", "Revisao")]
