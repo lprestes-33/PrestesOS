@@ -62,6 +62,12 @@ Diagnostico consolidado da plataforma:
 prestes status
 ```
 
+Planejamento priorizado do proximo ciclo:
+
+```bash
+prestes proximo-ciclo
+```
+
 Status local da integracao com Gmail:
 
 ```bash
@@ -243,6 +249,13 @@ Antes de alterar o projeto, leia nesta ordem:
 - o comando resume configuracao, banco, logs, sync basico e integracoes preparatorias;
 - o diagnostico separa base local pronta de integracoes opcionais ainda sem token;
 - essa visao unica facilita validar uso diario antes da evolucao para o proximo ciclo.
+
+## Estado atual do ciclo pos-v1.0
+
+- existe planejamento consultavel pela CLI com `prestes proximo-ciclo`;
+- o plano prioriza consolidacao do kernel, plugin manager, configuracao e banco;
+- a recomendacao depende do estado da base local identificado pelo diagnostico da plataforma;
+- isso transforma o roadmap em uma trilha operacional visivel dentro do proprio PrestesOS.
 
 ## Proximo objetivo
 

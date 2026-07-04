@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.22
+- Novo comando `prestes proximo-ciclo` para exibir o planejamento priorizado do ciclo pos-v1.0.
+- `PlanningService` adicionado para transformar o roadmap futuro em um plano consultavel pela plataforma.
+- Menu interativo atualizado com acesso direto ao proximo ciclo.
+- Testes adicionados para o planejamento e para o despacho da CLI.
+
 ## v0.3.21
 - Novo comando `prestes status` para diagnostico consolidado da plataforma visando o fechamento operacional da v1.0.
 - `PlatformService` adicionado para resumir configuracao, banco, logs, sync e integracoes preparatorias.

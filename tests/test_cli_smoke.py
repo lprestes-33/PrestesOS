@@ -129,6 +129,20 @@ def test_direct_platform_status_command_dispatches_to_service(monkeypatch):
     assert calls == ["platform"]
 
 
+def test_direct_next_cycle_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_proximo_ciclo",
+        lambda: calls.append("planning"),
+    )
+
+    main_module.main(["proximo-ciclo"])
+
+    assert calls == ["planning"]
+
+
 def test_direct_calendar_status_command_dispatches_to_service(monkeypatch):
     calls = []
 

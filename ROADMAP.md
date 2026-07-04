@@ -22,3 +22,9 @@
 
 ## v1.0
 - Plataforma estavel com documentacao, testes e sync basico.
+
+## Ciclo pos-v1.0
+- Consolidar Kernel como prioridade imediata.
+- Introduzir Plugin Manager sem quebrar o nucleo estavel.
+- Tornar ConfigService mais robusto para operacao diaria.
+- Tornar DatabaseService mais robusto para crescimento do conhecimento pessoal.

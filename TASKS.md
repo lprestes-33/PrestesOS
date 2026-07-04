@@ -31,4 +31,5 @@
 19. [x] Preparar integracao com Google Calendar.
 20. [x] Preparar integracao com NotebookLM.
 21. [x] Preparar fechamento da v1.0.
-22. [ ] Iniciar planejamento do ciclo pos-v1.0.
+22. [x] Iniciar planejamento do ciclo pos-v1.0.
+23. [ ] Consolidar Kernel.

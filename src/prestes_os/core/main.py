@@ -14,6 +14,7 @@ from prestes_os.services.event_bus import EventBus
 from prestes_os.services.gmail_service import GmailService
 from prestes_os.services.log_service import LogService
 from prestes_os.services.notebooklm_service import NotebookLMService
+from prestes_os.services.planning_service import PlanningService
 from prestes_os.services.platform_service import PlatformService
 from prestes_os.services.search_service import SearchService
 from prestes_os.services.sync_service import SyncService
@@ -47,6 +48,7 @@ def build_parser():
     semantic_parser = subparsers.add_parser("buscar-semantico", help="Busca semantica local nos conteudos indexados.")
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
     subparsers.add_parser("status", help="Exibe um diagnostico consolidado da plataforma.")
+    subparsers.add_parser("proximo-ciclo", help="Exibe o planejamento priorizado do ciclo pos-v1.0.")
     subparsers.add_parser("gmail-status", help="Exibe o preparo local da integracao com Gmail.")
     subparsers.add_parser("calendar-status", help="Exibe o preparo local da integracao com Google Calendar.")
     subparsers.add_parser("notebooklm-status", help="Exibe o preparo local da integracao com NotebookLM.")
@@ -188,6 +190,24 @@ def executar_status_plataforma():
     console.print(table)
 
 
+def executar_proximo_ciclo():
+    snapshot = PlanningService().snapshot()
+    foundation_status = "sim" if snapshot.foundation_ready else "nao"
+    console.print(f"[green]Ciclo:[/green] {snapshot.cycle_name}")
+    console.print(f"[green]Base pronta:[/green] {foundation_status}")
+    console.print(f"[yellow]{snapshot.summary}[/yellow]")
+
+    table = Table(title="Prioridades do proximo ciclo")
+    table.add_column("Frente")
+    table.add_column("Foco")
+    table.add_column("Entregas")
+
+    for initiative in snapshot.initiatives:
+        table.add_row(initiative.title, initiative.focus, "; ".join(initiative.outcomes))
+
+    console.print(table)
+
+
 def executar_preparacao_sync():
     service = SyncService()
     auth_state = service.resolve_google_drive_auth()
@@ -306,13 +326,14 @@ def executar_menu():
     table.add_row("8", "Buscar")
     table.add_row("9", "Buscar Semantico")
     table.add_row("10", "Status Plataforma")
-    table.add_row("11", "Gmail Status")
-    table.add_row("12", "Calendar Status")
-    table.add_row("13", "NotebookLM Status")
-    table.add_row("14", "Sincronizar")
-    table.add_row("15", "Historico Sync")
-    table.add_row("16", "Falhas Sync")
-    table.add_row("17", "Resumo Sync")
+    table.add_row("11", "Proximo Ciclo")
+    table.add_row("12", "Gmail Status")
+    table.add_row("13", "Calendar Status")
+    table.add_row("14", "NotebookLM Status")
+    table.add_row("15", "Sincronizar")
+    table.add_row("16", "Historico Sync")
+    table.add_row("17", "Falhas Sync")
+    table.add_row("18", "Resumo Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -345,18 +366,20 @@ def executar_menu():
     elif option == "10":
         executar_status_plataforma()
     elif option == "11":
-        executar_status_gmail()
+        executar_proximo_ciclo()
     elif option == "12":
-        executar_status_calendar()
+        executar_status_gmail()
     elif option == "13":
-        executar_status_notebooklm()
+        executar_status_calendar()
     elif option == "14":
-        executar_preparacao_sync()
+        executar_status_notebooklm()
     elif option == "15":
-        executar_historico_sync()
+        executar_preparacao_sync()
     elif option == "16":
-        executar_falhas_sync()
+        executar_historico_sync()
     elif option == "17":
+        executar_falhas_sync()
+    elif option == "18":
         executar_resumo_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
@@ -385,6 +408,9 @@ def main(argv=None):
         return
     if args.command == "status":
         executar_status_plataforma()
+        return
+    if args.command == "proximo-ciclo":
+        executar_proximo_ciclo()
         return
     if args.command == "gmail-status":
         executar_status_gmail()
