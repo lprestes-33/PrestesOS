@@ -69,6 +69,15 @@ export GOOGLE_DRIVE_ACCESS_TOKEN="seu_token"
 prestes sincronizar
 ```
 
+Ou com arquivo de credenciais local:
+
+```json
+{
+  "access_token": "seu_token",
+  "expires_at": "2026-07-04T00:00:00+00:00"
+}
+```
+
 Historico local de sincronizacao:
 
 ```bash
@@ -177,7 +186,8 @@ Antes de alterar o projeto, leia nesta ordem:
 - a CLI pode exibir o historico local de itens ja sincronizados;
 - falhas recentes de sincronizacao ficam registradas localmente para consulta;
 - cada execucao de sincronizacao pode ser auditada por um resumo de lote;
-- o token de acesso e lido por variavel de ambiente para evitar segredo no YAML.
+- a autenticacao Google Drive aceita variavel de ambiente ou arquivo local de credenciais;
+- tokens vencidos em arquivo sao detectados antes do upload.
 
 ## Proximo objetivo
 

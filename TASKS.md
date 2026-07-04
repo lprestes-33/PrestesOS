@@ -26,4 +26,5 @@
 14. [x] Exibir historico de sincronizacao na CLI.
 15. [x] Mostrar falhas recentes de sincronizacao.
 16. [x] Exibir resumo por execucao de sincronizacao.
-17. [ ] Melhorar autenticacao Google Drive.
+17. [x] Melhorar autenticacao Google Drive.
+18. [ ] Preparar integracao com Gmail.

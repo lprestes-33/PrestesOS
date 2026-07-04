@@ -58,4 +58,6 @@ def test_config_service_keeps_sync_defaults(prestes_base_dir):
     assert Path(data["sync"]["google_drive"]["credentials_path"]) == prestes_base_dir / "config" / "google_drive_credentials.json"
     assert Path(data["sync"]["google_drive"]["plan_file"]) == prestes_base_dir / "Sync" / "google_drive_upload_plan.json"
     assert data["sync"]["google_drive"]["access_token_env"] == "GOOGLE_DRIVE_ACCESS_TOKEN"
+    assert data["sync"]["google_drive"]["credentials_access_token_key"] == "access_token"
+    assert data["sync"]["google_drive"]["credentials_expires_at_key"] == "expires_at"
     assert data["sync"]["google_drive"]["root_folder_id"] == "root"

@@ -41,6 +41,8 @@ def build_default_config(base_dir: Path | None = None) -> dict:
                 "credentials_path": str(base / "config" / "google_drive_credentials.json"),
                 "plan_file": str(base / "Sync" / "google_drive_upload_plan.json"),
                 "access_token_env": "GOOGLE_DRIVE_ACCESS_TOKEN",
+                "credentials_access_token_key": "access_token",
+                "credentials_expires_at_key": "expires_at",
                 "root_folder_id": "root",
             },
         },
@@ -149,6 +151,14 @@ class ConfigService:
         access_token_env = google_drive.get("access_token_env")
         if not isinstance(access_token_env, str) or not access_token_env.strip():
             google_drive["access_token_env"] = self.default_config["sync"]["google_drive"]["access_token_env"]
+
+        credentials_access_token_key = google_drive.get("credentials_access_token_key")
+        if not isinstance(credentials_access_token_key, str) or not credentials_access_token_key.strip():
+            google_drive["credentials_access_token_key"] = self.default_config["sync"]["google_drive"]["credentials_access_token_key"]
+
+        credentials_expires_at_key = google_drive.get("credentials_expires_at_key")
+        if not isinstance(credentials_expires_at_key, str) or not credentials_expires_at_key.strip():
+            google_drive["credentials_expires_at_key"] = self.default_config["sync"]["google_drive"]["credentials_expires_at_key"]
 
         root_folder_id = google_drive.get("root_folder_id")
         if not isinstance(root_folder_id, str) or not root_folder_id.strip():

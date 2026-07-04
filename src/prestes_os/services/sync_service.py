@@ -167,6 +167,18 @@ class SyncRunSummarySnapshot:
     items: list[SyncRunSummaryItem]
 
 
+@dataclass
+class GoogleDriveAuthState:
+    """Responsabilidade: representar o estado efetivo da autenticacao Google Drive."""
+
+    source: str
+    access_token: str | None
+    credentials_path: Path
+    expires_at: str | None
+    is_expired: bool
+    message: str
+
+
 class SyncConfigurationError(RuntimeError):
     """Responsabilidade: sinalizar configuracao invalida para sincronizacao remota."""
 
@@ -334,12 +346,89 @@ class SyncService:
     def _google_drive_config(self) -> dict:
         return self.config.get("sync.google_drive", {}) or {}
 
-    def _google_drive_access_token(self) -> str | None:
+    def _google_drive_credentials_path(self) -> Path:
+        google_drive = self._google_drive_config()
+        return Path(google_drive.get("credentials_path")).expanduser()
+
+    def _google_drive_credentials_payload(self) -> dict:
+        credentials_path = self._google_drive_credentials_path()
+        if not credentials_path.exists():
+            return {}
+        return json.loads(credentials_path.read_text(encoding="utf-8"))
+
+    def _google_drive_token_env_name(self) -> str:
         google_drive = self._google_drive_config()
         env_name = google_drive.get("access_token_env", "GOOGLE_DRIVE_ACCESS_TOKEN")
-        if not isinstance(env_name, str) or not env_name.strip():
-            return None
-        return os.environ.get(env_name.strip())
+        return str(env_name).strip() or "GOOGLE_DRIVE_ACCESS_TOKEN"
+
+    def _google_drive_credentials_access_token_key(self) -> str:
+        google_drive = self._google_drive_config()
+        key_name = google_drive.get("credentials_access_token_key", "access_token")
+        return str(key_name).strip() or "access_token"
+
+    def _google_drive_credentials_expires_at_key(self) -> str:
+        google_drive = self._google_drive_config()
+        key_name = google_drive.get("credentials_expires_at_key", "expires_at")
+        return str(key_name).strip() or "expires_at"
+
+    def _is_google_drive_expired(self, expires_at: str | None) -> bool:
+        if not expires_at:
+            return False
+        normalized = expires_at.replace("Z", "+00:00")
+        try:
+            expires_at_dt = datetime.fromisoformat(normalized)
+        except ValueError:
+            return False
+        return expires_at_dt <= datetime.now(expires_at_dt.tzinfo)
+
+    def resolve_google_drive_auth(self) -> GoogleDriveAuthState:
+        env_name = self._google_drive_token_env_name()
+        env_token = os.environ.get(env_name)
+        credentials_path = self._google_drive_credentials_path()
+
+        if env_token:
+            return GoogleDriveAuthState(
+                source="env",
+                access_token=env_token,
+                credentials_path=credentials_path,
+                expires_at=None,
+                is_expired=False,
+                message=f"Token carregado da variavel de ambiente {env_name}.",
+            )
+
+        payload = self._google_drive_credentials_payload()
+        access_token = payload.get(self._google_drive_credentials_access_token_key())
+        expires_at = payload.get(self._google_drive_credentials_expires_at_key())
+        is_expired = self._is_google_drive_expired(str(expires_at) if expires_at is not None else None)
+
+        if isinstance(access_token, str) and access_token.strip() and not is_expired:
+            return GoogleDriveAuthState(
+                source="file",
+                access_token=access_token.strip(),
+                credentials_path=credentials_path,
+                expires_at=str(expires_at) if expires_at is not None else None,
+                is_expired=False,
+                message=f"Token carregado do arquivo {credentials_path}.",
+            )
+
+        if isinstance(access_token, str) and access_token.strip() and is_expired:
+            return GoogleDriveAuthState(
+                source="file-expired",
+                access_token=None,
+                credentials_path=credentials_path,
+                expires_at=str(expires_at),
+                is_expired=True,
+                message=f"Token do arquivo {credentials_path} esta expirado.",
+            )
+
+        return GoogleDriveAuthState(
+            source="missing",
+            access_token=None,
+            credentials_path=credentials_path,
+            expires_at=None,
+            is_expired=False,
+            message="Nenhum token Google Drive valido foi encontrado.",
+        )
 
     def _google_drive_root_folder_id(self) -> str:
         google_drive = self._google_drive_config()
@@ -347,13 +436,11 @@ class SyncService:
         return str(root_folder_id).strip() or "root"
 
     def _build_google_drive_client(self) -> GoogleDriveClient:
-        access_token = self._google_drive_access_token()
-        if not access_token:
-            raise SyncConfigurationError(
-                "Configure a variavel de ambiente do token Google Drive antes de sincronizar."
-            )
+        auth_state = self.resolve_google_drive_auth()
+        if not auth_state.access_token:
+            raise SyncConfigurationError(auth_state.message)
         return GoogleDriveClient(
-            access_token=access_token,
+            access_token=auth_state.access_token,
             root_folder_id=self._google_drive_root_folder_id(),
         )
 
@@ -619,7 +706,8 @@ class SyncService:
         current_manifest = manifest or self.build_manifest()
         google_drive = self._google_drive_config()
         remote_root = google_drive.get("remote_root", "PrestesOS").strip("/")
-        credentials_path = Path(google_drive.get("credentials_path")).expanduser()
+        auth_state = self.resolve_google_drive_auth()
+        credentials_path = auth_state.credentials_path
         plan_file = Path(google_drive.get("plan_file")).expanduser()
         plan_file.parent.mkdir(parents=True, exist_ok=True)
 
@@ -642,7 +730,9 @@ class SyncService:
             "generated_at": current_manifest.generated_at,
             "remote_root": remote_root,
             "credentials_path": str(credentials_path),
-            "credentials_configured": credentials_path.exists(),
+            "credentials_configured": auth_state.access_token is not None,
+            "auth_source": auth_state.source,
+            "auth_message": auth_state.message,
             "manifest_file": str(current_manifest.manifest_file),
             "pending_count": len(pending_items),
             "skipped_count": len(skipped_items),
@@ -682,7 +772,7 @@ class SyncService:
             plan_file=plan_file,
             remote_root=remote_root,
             credentials_path=credentials_path,
-            credentials_configured=credentials_path.exists(),
+            credentials_configured=auth_state.access_token is not None,
             items=pending_items,
             skipped_items=skipped_items,
         )
@@ -787,7 +877,8 @@ class SyncService:
 
         if provider == "google-drive" and preparation.upload_plan is not None:
             skipped_count = len(preparation.upload_plan.skipped_items)
-            if self._google_drive_access_token():
+            auth_state = self.resolve_google_drive_auth()
+            if auth_state.access_token:
                 upload_result = self.upload_google_drive(preparation.upload_plan)
                 uploaded_count = upload_result.uploaded_count
                 failed_count = max(len(preparation.upload_plan.items) - uploaded_count, 0)
@@ -796,7 +887,7 @@ class SyncService:
                     "sync.google_drive.upload.pending_auth",
                     "sync",
                     "Upload pendente por falta de token",
-                    payload={"env": self._google_drive_config().get("access_token_env")},
+                    payload={"env": self._google_drive_token_env_name(), "source": auth_state.source},
                 )
                 failed_count = len(preparation.upload_plan.items)
 

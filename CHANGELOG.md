@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.17
+- Autenticacao Google Drive melhorada com suporte a token por arquivo local ou variavel de ambiente.
+- Tokens em arquivo agora podem informar expiracao e sao validados antes do upload.
+- CLI de sincronizacao passou a informar a origem efetiva da autenticacao.
+- Testes adicionados para autenticacao por arquivo e token expirado.
+
 ## v0.3.16
 - Novo comando `prestes resumo-sync` para exibir resumos por execucao de sincronizacao.
 - `SyncService` passou a persistir resumos de lote com identificador, contagens e data.

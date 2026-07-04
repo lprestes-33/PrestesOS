@@ -127,7 +127,9 @@ def executar_busca_semantica(consulta):
 
 
 def executar_preparacao_sync():
-    result = SyncService().execute_sync()
+    service = SyncService()
+    auth_state = service.resolve_google_drive_auth()
+    result = service.execute_sync()
     console.print(f"[green]Execucao:[/green] {result.run_id}")
     console.print(f"[green]Manifesto gerado:[/green] {result.preparation.manifest.manifest_file}")
     console.print(f"[green]Arquivos preparados:[/green] {len(result.preparation.manifest.items)}")
@@ -135,12 +137,13 @@ def executar_preparacao_sync():
         console.print(f"[green]Plano Google Drive:[/green] {result.preparation.upload_plan.plan_file}")
         status = "sim" if result.preparation.upload_plan.credentials_configured else "nao"
         console.print(f"[green]Credenciais configuradas:[/green] {status}")
+        console.print(f"[green]Autenticacao:[/green] {auth_state.source}")
         console.print(f"[green]Arquivos ignorados:[/green] {len(result.preparation.upload_plan.skipped_items)}")
     if result.upload_result is not None:
         console.print(f"[green]Arquivos enviados:[/green] {result.upload_result.uploaded_count}")
         console.print(f"[green]Arquivos reaproveitados:[/green] {result.upload_result.skipped_count}")
     elif result.preparation.upload_plan is not None:
-        console.print("[yellow]Upload remoto pendente: configure o token do Google Drive.[/yellow]")
+        console.print(f"[yellow]{auth_state.message}[/yellow]")
 
 
 def executar_historico_sync():

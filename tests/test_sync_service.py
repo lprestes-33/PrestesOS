@@ -48,7 +48,7 @@ def test_sync_service_builds_google_drive_plan(prestes_base_dir, database_servic
     create_sync_fixture(prestes_base_dir)
     credentials_path = prestes_base_dir / "config" / "google_drive_credentials.json"
     credentials_path.parent.mkdir(parents=True, exist_ok=True)
-    credentials_path.write_text('{"installed":{}}', encoding="utf-8")
+    credentials_path.write_text('{"access_token":"arquivo-token"}', encoding="utf-8")
 
     config = ConfigService(base_dir=prestes_base_dir)
     data = config.load()
@@ -82,6 +82,42 @@ def test_sync_service_google_drive_plan_marks_missing_credentials(prestes_base_d
 
     assert result.upload_plan is not None
     assert result.upload_plan.credentials_configured is False
+
+
+def test_sync_service_resolves_google_drive_auth_from_file(prestes_base_dir, database_service, log_service):
+    create_sync_fixture(prestes_base_dir)
+    credentials_path = prestes_base_dir / "config" / "google_drive_credentials.json"
+    credentials_path.parent.mkdir(parents=True, exist_ok=True)
+    credentials_path.write_text('{"access_token":"arquivo-token"}', encoding="utf-8")
+
+    config = ConfigService(base_dir=prestes_base_dir)
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SyncService(config_service=config, event_bus=bus)
+
+    auth_state = service.resolve_google_drive_auth()
+
+    assert auth_state.source == "file"
+    assert auth_state.access_token == "arquivo-token"
+
+
+def test_sync_service_marks_expired_google_drive_file_token(prestes_base_dir, database_service, log_service):
+    create_sync_fixture(prestes_base_dir)
+    credentials_path = prestes_base_dir / "config" / "google_drive_credentials.json"
+    credentials_path.parent.mkdir(parents=True, exist_ok=True)
+    credentials_path.write_text(
+        '{"access_token":"arquivo-token","expires_at":"2000-01-01T00:00:00+00:00"}',
+        encoding="utf-8",
+    )
+
+    config = ConfigService(base_dir=prestes_base_dir)
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SyncService(config_service=config, event_bus=bus)
+
+    auth_state = service.resolve_google_drive_auth()
+
+    assert auth_state.source == "file-expired"
+    assert auth_state.access_token is None
+    assert auth_state.is_expired is True
 
 
 def test_sync_service_execute_sync_marks_pending_auth(monkeypatch, prestes_base_dir, database_service, log_service):
