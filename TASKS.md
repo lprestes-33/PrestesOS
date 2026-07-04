@@ -23,4 +23,5 @@
 11. [x] Integracao futura com Google Drive.
 12. [x] Upload real para Google Drive via API.
 13. [x] Persistir estado de sincronizacao incremental.
-14. [ ] Exibir historico de sincronizacao na CLI.
+14. [x] Exibir historico de sincronizacao na CLI.
+15. [ ] Mostrar falhas recentes de sincronizacao.

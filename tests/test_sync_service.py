@@ -172,3 +172,31 @@ def test_sync_service_skips_already_synced_files(monkeypatch, prestes_base_dir, 
     assert second_result.upload_result.skipped_count == 3
     assert len(second_result.preparation.upload_plan.skipped_items) == 3
     assert len(fake_client.upload_calls) == 3
+
+
+def test_sync_service_reads_sync_history(monkeypatch, prestes_base_dir, database_service, log_service):
+    class FakeGoogleDriveClient:
+        def ensure_folder_path(self, folder_parts):
+            return "folder-123"
+
+        def upload_file(self, parent_id, file_name, local_path):
+            return "uploaded", f"id-{file_name}"
+
+    create_sync_fixture(prestes_base_dir)
+    config = ConfigService(base_dir=prestes_base_dir)
+    data = config.load()
+    data["sync"]["provider"] = "google-drive"
+    config.save(data)
+
+    monkeypatch.setenv("GOOGLE_DRIVE_ACCESS_TOKEN", "token-teste")
+
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SyncService(config_service=config, event_bus=bus)
+    monkeypatch.setattr(service, "_build_google_drive_client", lambda: FakeGoogleDriveClient())
+
+    service.execute_sync()
+    history = service.read_sync_history()
+
+    assert history.total_items == 3
+    assert history.state_file.exists()
+    assert history.items[0].file_id.startswith("id-")

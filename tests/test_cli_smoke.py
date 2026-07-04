@@ -113,3 +113,17 @@ def test_direct_sync_command_dispatches_to_service(monkeypatch):
     main_module.main(["sincronizar"])
 
     assert calls == ["sync"]
+
+
+def test_direct_sync_history_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_historico_sync",
+        lambda: calls.append("history"),
+    )
+
+    main_module.main(["historico-sync"])
+
+    assert calls == ["history"]

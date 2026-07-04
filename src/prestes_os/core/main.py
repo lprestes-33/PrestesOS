@@ -43,6 +43,7 @@ def build_parser():
     semantic_parser = subparsers.add_parser("buscar-semantico", help="Busca semantica local nos conteudos indexados.")
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
     subparsers.add_parser("sincronizar", help="Gera manifesto local para sincronizacao futura.")
+    subparsers.add_parser("historico-sync", help="Exibe o historico local de sincronizacao.")
     return parser
 
 
@@ -139,6 +140,26 @@ def executar_preparacao_sync():
         console.print("[yellow]Upload remoto pendente: configure o token do Google Drive.[/yellow]")
 
 
+def executar_historico_sync():
+    history = SyncService().read_sync_history()
+    console.print(f"[green]Arquivo de estado:[/green] {history.state_file}")
+    console.print(f"[green]Itens sincronizados:[/green] {history.total_items}")
+    if not history.items:
+        console.print("[yellow]Nenhum historico de sincronizacao encontrado.[/yellow]")
+        return
+
+    table = Table(title="Historico de sincronizacao")
+    table.add_column("Sincronizado em")
+    table.add_column("Arquivo local")
+    table.add_column("Destino remoto")
+    table.add_column("File ID")
+
+    for item in history.items:
+        table.add_row(item.synced_at, item.relative_path, item.remote_path, item.file_id)
+
+    console.print(table)
+
+
 def executar_menu():
     db = DatabaseService()
     bus = EventBus()
@@ -166,6 +187,7 @@ def executar_menu():
     table.add_row("8", "Buscar")
     table.add_row("9", "Buscar Semantico")
     table.add_row("10", "Sincronizar")
+    table.add_row("11", "Historico Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -197,6 +219,8 @@ def executar_menu():
         executar_busca_semantica(consulta)
     elif option == "10":
         executar_preparacao_sync()
+    elif option == "11":
+        executar_historico_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
     else:
@@ -224,6 +248,9 @@ def main(argv=None):
         return
     if args.command == "sincronizar":
         executar_preparacao_sync()
+        return
+    if args.command == "historico-sync":
+        executar_historico_sync()
         return
 
     executar_menu()

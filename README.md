@@ -69,6 +69,12 @@ export GOOGLE_DRIVE_ACCESS_TOKEN="seu_token"
 prestes sincronizar
 ```
 
+Historico local de sincronizacao:
+
+```bash
+prestes historico-sync
+```
+
 ## Estrutura
 
 ```text
@@ -156,6 +162,7 @@ Antes de alterar o projeto, leia nesta ordem:
 - existe modo preparatorio para Google Drive com plano de upload e pasta remota configuravel;
 - o upload real pode ocorrer pela API do Google Drive quando `sync.provider=google-drive`;
 - o estado de sincronizacao e persistido localmente para evitar reenvio de arquivos inalterados;
+- a CLI pode exibir o historico local de itens ja sincronizados;
 - o token de acesso e lido por variavel de ambiente para evitar segredo no YAML.
 
 ## Proximo objetivo

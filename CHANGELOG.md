@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.14
+- Novo comando `prestes historico-sync` para exibir o historico local de sincronizacao.
+- `SyncService` passou a expor leitura estruturada do estado incremental persistido.
+- Menu interativo ganhou acesso ao historico de sincronizacao.
+- Testes adicionados para leitura do historico e despacho da CLI.
+
 ## v0.3.13
 - Estado incremental de sincronizacao adicionado em arquivo local JSON.
 - `SyncService` passou a ignorar arquivos ja enviados sem alteracao de hash ou destino remoto.

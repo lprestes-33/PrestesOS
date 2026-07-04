@@ -104,6 +104,26 @@ class SyncStateEntry:
     synced_at: str
 
 
+@dataclass
+class SyncHistoryItem:
+    """Responsabilidade: representar uma linha do historico de sincronizacao."""
+
+    relative_path: str
+    remote_path: str
+    file_id: str
+    synced_at: str
+    sha256: str
+
+
+@dataclass
+class SyncHistorySnapshot:
+    """Responsabilidade: representar o historico atual persistido localmente."""
+
+    state_file: Path
+    total_items: int
+    items: list[SyncHistoryItem]
+
+
 class SyncConfigurationError(RuntimeError):
     """Responsabilidade: sinalizar configuracao invalida para sincronizacao remota."""
 
@@ -328,6 +348,28 @@ class SyncService:
             },
         }
         state_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
+
+    def read_sync_history(self) -> SyncHistorySnapshot:
+        state = self._load_sync_state()
+        items = [
+            SyncHistoryItem(
+                relative_path=relative_path,
+                remote_path=entry.remote_path,
+                file_id=entry.file_id,
+                synced_at=entry.synced_at,
+                sha256=entry.sha256,
+            )
+            for relative_path, entry in sorted(
+                state.items(),
+                key=lambda item: item[1].synced_at,
+                reverse=True,
+            )
+        ]
+        return SyncHistorySnapshot(
+            state_file=self._sync_state_file(),
+            total_items=len(items),
+            items=items,
+        )
 
     def _is_item_synced(self, plan_item: SyncPlanItem, state: dict[str, SyncStateEntry]) -> bool:
         relative_key = str(plan_item.local_path.relative_to(self._base_dir()))
