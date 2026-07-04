@@ -141,3 +141,17 @@ def test_direct_sync_failures_command_dispatches_to_service(monkeypatch):
     main_module.main(["falhas-sync"])
 
     assert calls == ["failures"]
+
+
+def test_direct_sync_summary_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_resumo_sync",
+        lambda: calls.append("summary"),
+    )
+
+    main_module.main(["resumo-sync"])
+
+    assert calls == ["summary"]

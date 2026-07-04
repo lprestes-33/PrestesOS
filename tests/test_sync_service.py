@@ -232,3 +232,33 @@ def test_sync_service_records_recent_failures(monkeypatch, prestes_base_dir, dat
     assert failures.total_items == 1
     assert failures.failure_file.exists()
     assert failures.items[0].error_message == "falha simulada"
+
+
+def test_sync_service_records_run_summary(monkeypatch, prestes_base_dir, database_service, log_service):
+    class FakeGoogleDriveClient:
+        def ensure_folder_path(self, folder_parts):
+            return "folder-123"
+
+        def upload_file(self, parent_id, file_name, local_path):
+            return "uploaded", f"id-{file_name}"
+
+    create_sync_fixture(prestes_base_dir)
+    config = ConfigService(base_dir=prestes_base_dir)
+    data = config.load()
+    data["sync"]["provider"] = "google-drive"
+    config.save(data)
+
+    monkeypatch.setenv("GOOGLE_DRIVE_ACCESS_TOKEN", "token-teste")
+
+    bus = EventBus(db_service=database_service, log_service=log_service)
+    service = SyncService(config_service=config, event_bus=bus)
+    monkeypatch.setattr(service, "_build_google_drive_client", lambda: FakeGoogleDriveClient())
+
+    result = service.execute_sync()
+    snapshot = service.read_sync_runs()
+
+    assert result.run_id
+    assert snapshot.total_items == 1
+    assert snapshot.summary_file.exists()
+    assert snapshot.items[0].run_id == result.run_id
+    assert snapshot.items[0].uploaded_count == 3

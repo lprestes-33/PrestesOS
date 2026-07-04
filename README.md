@@ -81,6 +81,12 @@ Falhas recentes de sincronizacao:
 prestes falhas-sync
 ```
 
+Resumo por execucao de sincronizacao:
+
+```bash
+prestes resumo-sync
+```
+
 ## Estrutura
 
 ```text
@@ -170,6 +176,7 @@ Antes de alterar o projeto, leia nesta ordem:
 - o estado de sincronizacao e persistido localmente para evitar reenvio de arquivos inalterados;
 - a CLI pode exibir o historico local de itens ja sincronizados;
 - falhas recentes de sincronizacao ficam registradas localmente para consulta;
+- cada execucao de sincronizacao pode ser auditada por um resumo de lote;
 - o token de acesso e lido por variavel de ambiente para evitar segredo no YAML.
 
 ## Proximo objetivo

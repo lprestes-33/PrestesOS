@@ -92,6 +92,7 @@ class SyncExecution:
 
     preparation: SyncPreparation
     upload_result: SyncUploadResult | None
+    run_id: str
 
 
 @dataclass
@@ -142,6 +143,28 @@ class SyncFailureSnapshot:
     failure_file: Path
     total_items: int
     items: list[SyncFailureItem]
+
+
+@dataclass
+class SyncRunSummaryItem:
+    """Responsabilidade: representar o resumo de uma execucao de sincronizacao."""
+
+    run_id: str
+    executed_at: str
+    provider: str
+    prepared_count: int
+    uploaded_count: int
+    skipped_count: int
+    failed_count: int
+
+
+@dataclass
+class SyncRunSummarySnapshot:
+    """Responsabilidade: representar os resumos recentes de execucao."""
+
+    summary_file: Path
+    total_items: int
+    items: list[SyncRunSummaryItem]
 
 
 class SyncConfigurationError(RuntimeError):
@@ -305,6 +328,9 @@ class SyncService:
     def _sync_failure_file(self) -> Path:
         return self._manifest_dir() / "sync_failures.json"
 
+    def _sync_runs_file(self) -> Path:
+        return self._manifest_dir() / "sync_runs.json"
+
     def _google_drive_config(self) -> dict:
         return self.config.get("sync.google_drive", {}) or {}
 
@@ -414,6 +440,52 @@ class SyncService:
         failures.insert(0, item)
         self._save_sync_failures(failures)
 
+    def _load_sync_runs(self) -> list[SyncRunSummaryItem]:
+        summary_file = self._sync_runs_file()
+        if not summary_file.exists():
+            return []
+
+        payload = json.loads(summary_file.read_text(encoding="utf-8"))
+        items = []
+        for raw_item in payload.get("items", []):
+            items.append(
+                SyncRunSummaryItem(
+                    run_id=str(raw_item.get("run_id", "")),
+                    executed_at=str(raw_item.get("executed_at", "")),
+                    provider=str(raw_item.get("provider", "")),
+                    prepared_count=int(raw_item.get("prepared_count", 0)),
+                    uploaded_count=int(raw_item.get("uploaded_count", 0)),
+                    skipped_count=int(raw_item.get("skipped_count", 0)),
+                    failed_count=int(raw_item.get("failed_count", 0)),
+                )
+            )
+        return items
+
+    def _save_sync_runs(self, items: list[SyncRunSummaryItem]) -> None:
+        summary_file = self._sync_runs_file()
+        summary_file.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+            "items": [
+                {
+                    "run_id": item.run_id,
+                    "executed_at": item.executed_at,
+                    "provider": item.provider,
+                    "prepared_count": item.prepared_count,
+                    "uploaded_count": item.uploaded_count,
+                    "skipped_count": item.skipped_count,
+                    "failed_count": item.failed_count,
+                }
+                for item in items[:20]
+            ],
+        }
+        summary_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
+
+    def _record_sync_run(self, item: SyncRunSummaryItem) -> None:
+        runs = self._load_sync_runs()
+        runs.insert(0, item)
+        self._save_sync_runs(runs)
+
     def read_sync_history(self) -> SyncHistorySnapshot:
         state = self._load_sync_state()
         items = [
@@ -440,6 +512,14 @@ class SyncService:
         items = self._load_sync_failures()
         return SyncFailureSnapshot(
             failure_file=self._sync_failure_file(),
+            total_items=len(items),
+            items=items,
+        )
+
+    def read_sync_runs(self) -> SyncRunSummarySnapshot:
+        items = self._load_sync_runs()
+        return SyncRunSummarySnapshot(
+            summary_file=self._sync_runs_file(),
             total_items=len(items),
             items=items,
         )
@@ -697,13 +777,20 @@ class SyncService:
         return result
 
     def execute_sync(self) -> SyncExecution:
+        run_id = datetime.now().strftime("%Y%m%d%H%M%S")
         preparation = self.prepare_sync()
         provider = self._provider()
         upload_result = None
+        uploaded_count = 0
+        skipped_count = 0
+        failed_count = 0
 
         if provider == "google-drive" and preparation.upload_plan is not None:
+            skipped_count = len(preparation.upload_plan.skipped_items)
             if self._google_drive_access_token():
                 upload_result = self.upload_google_drive(preparation.upload_plan)
+                uploaded_count = upload_result.uploaded_count
+                failed_count = max(len(preparation.upload_plan.items) - uploaded_count, 0)
             else:
                 self.bus.publish(
                     "sync.google_drive.upload.pending_auth",
@@ -711,5 +798,18 @@ class SyncService:
                     "Upload pendente por falta de token",
                     payload={"env": self._google_drive_config().get("access_token_env")},
                 )
+                failed_count = len(preparation.upload_plan.items)
 
-        return SyncExecution(preparation=preparation, upload_result=upload_result)
+        self._record_sync_run(
+            SyncRunSummaryItem(
+                run_id=run_id,
+                executed_at=datetime.now().isoformat(timespec="seconds"),
+                provider=provider,
+                prepared_count=len(preparation.manifest.items),
+                uploaded_count=uploaded_count,
+                skipped_count=skipped_count,
+                failed_count=failed_count,
+            )
+        )
+
+        return SyncExecution(preparation=preparation, upload_result=upload_result, run_id=run_id)

@@ -45,6 +45,7 @@ def build_parser():
     subparsers.add_parser("sincronizar", help="Gera manifesto local para sincronizacao futura.")
     subparsers.add_parser("historico-sync", help="Exibe o historico local de sincronizacao.")
     subparsers.add_parser("falhas-sync", help="Exibe falhas recentes de sincronizacao.")
+    subparsers.add_parser("resumo-sync", help="Exibe resumo por execucao de sincronizacao.")
     return parser
 
 
@@ -127,6 +128,7 @@ def executar_busca_semantica(consulta):
 
 def executar_preparacao_sync():
     result = SyncService().execute_sync()
+    console.print(f"[green]Execucao:[/green] {result.run_id}")
     console.print(f"[green]Manifesto gerado:[/green] {result.preparation.manifest.manifest_file}")
     console.print(f"[green]Arquivos preparados:[/green] {len(result.preparation.manifest.items)}")
     if result.preparation.upload_plan is not None:
@@ -181,6 +183,37 @@ def executar_falhas_sync():
     console.print(table)
 
 
+def executar_resumo_sync():
+    snapshot = SyncService().read_sync_runs()
+    console.print(f"[green]Arquivo de resumo:[/green] {snapshot.summary_file}")
+    console.print(f"[green]Execucoes registradas:[/green] {snapshot.total_items}")
+    if not snapshot.items:
+        console.print("[yellow]Nenhum resumo de sincronizacao encontrado.[/yellow]")
+        return
+
+    table = Table(title="Resumo por execucao de sincronizacao")
+    table.add_column("Execucao")
+    table.add_column("Quando")
+    table.add_column("Provider")
+    table.add_column("Preparados")
+    table.add_column("Enviados")
+    table.add_column("Ignorados")
+    table.add_column("Falhos")
+
+    for item in snapshot.items:
+        table.add_row(
+            item.run_id,
+            item.executed_at,
+            item.provider,
+            str(item.prepared_count),
+            str(item.uploaded_count),
+            str(item.skipped_count),
+            str(item.failed_count),
+        )
+
+    console.print(table)
+
+
 def executar_menu():
     db = DatabaseService()
     bus = EventBus()
@@ -210,6 +243,7 @@ def executar_menu():
     table.add_row("10", "Sincronizar")
     table.add_row("11", "Historico Sync")
     table.add_row("12", "Falhas Sync")
+    table.add_row("13", "Resumo Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -245,6 +279,8 @@ def executar_menu():
         executar_historico_sync()
     elif option == "12":
         executar_falhas_sync()
+    elif option == "13":
+        executar_resumo_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
     else:
@@ -278,6 +314,9 @@ def main(argv=None):
         return
     if args.command == "falhas-sync":
         executar_falhas_sync()
+        return
+    if args.command == "resumo-sync":
+        executar_resumo_sync()
         return
 
     executar_menu()

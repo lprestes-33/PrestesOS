@@ -25,4 +25,5 @@
 13. [x] Persistir estado de sincronizacao incremental.
 14. [x] Exibir historico de sincronizacao na CLI.
 15. [x] Mostrar falhas recentes de sincronizacao.
-16. [ ] Exibir resumo por execucao de sincronizacao.
+16. [x] Exibir resumo por execucao de sincronizacao.
+17. [ ] Melhorar autenticacao Google Drive.

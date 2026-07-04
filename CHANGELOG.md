@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.16
+- Novo comando `prestes resumo-sync` para exibir resumos por execucao de sincronizacao.
+- `SyncService` passou a persistir resumos de lote com identificador, contagens e data.
+- A execucao de sincronizacao agora informa `run_id` para auditoria local.
+- Testes adicionados para resumo de execucao e despacho da CLI.
+
 ## v0.3.15
 - Novo comando `prestes falhas-sync` para exibir falhas recentes de sincronizacao.
 - `SyncService` passou a persistir falhas locais de upload em arquivo JSON dedicado.
