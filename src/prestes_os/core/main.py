@@ -7,6 +7,7 @@ from rich.table import Table
 
 from prestes_os.audio.audio_service import AudioService
 from prestes_os.services.ai_service import AIService
+from prestes_os.services.calendar_service import CalendarService
 from prestes_os.services.config_service import ConfigService
 from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
@@ -44,6 +45,7 @@ def build_parser():
     semantic_parser = subparsers.add_parser("buscar-semantico", help="Busca semantica local nos conteudos indexados.")
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
     subparsers.add_parser("gmail-status", help="Exibe o preparo local da integracao com Gmail.")
+    subparsers.add_parser("calendar-status", help="Exibe o preparo local da integracao com Google Calendar.")
     subparsers.add_parser("sincronizar", help="Gera manifesto local para sincronizacao futura.")
     subparsers.add_parser("historico-sync", help="Exibe o historico local de sincronizacao.")
     subparsers.add_parser("falhas-sync", help="Exibe falhas recentes de sincronizacao.")
@@ -137,6 +139,18 @@ def executar_status_gmail():
     console.print(f"[green]Arquivo de credenciais:[/green] {status.auth.credentials_path}")
     console.print(f"[green]Consulta padrao:[/green] {status.default_query}")
     console.print(f"[green]Maximo de resultados:[/green] {status.max_results}")
+    console.print(f"[yellow]{status.auth.message}[/yellow]")
+
+
+def executar_status_calendar():
+    status = CalendarService().status()
+    auth_status = "sim" if status.auth.access_token else "nao"
+    console.print(f"[green]Provider:[/green] {status.provider}")
+    console.print(f"[green]Autenticado:[/green] {auth_status}")
+    console.print(f"[green]Origem do token:[/green] {status.auth.source}")
+    console.print(f"[green]Arquivo de credenciais:[/green] {status.auth.credentials_path}")
+    console.print(f"[green]Calendar padrao:[/green] {status.default_calendar_id}")
+    console.print(f"[green]Dias a frente:[/green] {status.days_ahead}")
     console.print(f"[yellow]{status.auth.message}[/yellow]")
 
 
@@ -258,10 +272,11 @@ def executar_menu():
     table.add_row("8", "Buscar")
     table.add_row("9", "Buscar Semantico")
     table.add_row("10", "Gmail Status")
-    table.add_row("11", "Sincronizar")
-    table.add_row("12", "Historico Sync")
-    table.add_row("13", "Falhas Sync")
-    table.add_row("14", "Resumo Sync")
+    table.add_row("11", "Calendar Status")
+    table.add_row("12", "Sincronizar")
+    table.add_row("13", "Historico Sync")
+    table.add_row("14", "Falhas Sync")
+    table.add_row("15", "Resumo Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -294,12 +309,14 @@ def executar_menu():
     elif option == "10":
         executar_status_gmail()
     elif option == "11":
-        executar_preparacao_sync()
+        executar_status_calendar()
     elif option == "12":
-        executar_historico_sync()
+        executar_preparacao_sync()
     elif option == "13":
-        executar_falhas_sync()
+        executar_historico_sync()
     elif option == "14":
+        executar_falhas_sync()
+    elif option == "15":
         executar_resumo_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
@@ -328,6 +345,9 @@ def main(argv=None):
         return
     if args.command == "gmail-status":
         executar_status_gmail()
+        return
+    if args.command == "calendar-status":
+        executar_status_calendar()
         return
     if args.command == "sincronizar":
         executar_preparacao_sync()

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.19
+- `CalendarService` adicionado para preparar autenticacao e configuracao da futura integracao com Google Calendar.
+- Novo comando `prestes calendar-status` para diagnostico local da integracao.
+- Configuracao `calendar` adicionada ao YAML com token por ambiente ou arquivo local.
+- Testes adicionados para autenticacao Calendar e despacho da CLI.
+
 ## v0.3.18
 - `GmailService` adicionado para preparar autenticacao e configuracao da futura integracao com Gmail.
 - Novo comando `prestes gmail-status` para diagnostico local da integracao.

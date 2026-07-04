@@ -40,6 +40,15 @@ def build_default_config(base_dir: Path | None = None) -> dict:
             "default_query": "label:inbox newer_than:7d",
             "max_results": 20,
         },
+        "calendar": {
+            "provider": "google-calendar-api-preparado",
+            "credentials_path": str(base / "config" / "google_calendar_credentials.json"),
+            "access_token_env": "GOOGLE_CALENDAR_ACCESS_TOKEN",
+            "credentials_access_token_key": "access_token",
+            "credentials_expires_at_key": "expires_at",
+            "default_calendar_id": "primary",
+            "days_ahead": 7,
+        },
         "sync": {
             "provider": "local-manifest",
             "manifest_dir": str(base / "Sync"),
@@ -103,6 +112,7 @@ class ConfigService:
             ("logs", "path"),
             ("ai", "resumos_dir"),
             ("gmail", "credentials_path"),
+            ("calendar", "credentials_path"),
             ("sync", "manifest_dir"),
             ("sync", "state_file"),
             ("sync.google_drive", "credentials_path"),
@@ -168,6 +178,31 @@ class ConfigService:
         max_results = gmail.get("max_results")
         if not isinstance(max_results, int) or max_results <= 0:
             gmail["max_results"] = self.default_config["gmail"]["max_results"]
+
+        calendar = data["calendar"]
+        provider = calendar.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            calendar["provider"] = self.default_config["calendar"]["provider"]
+
+        access_token_env = calendar.get("access_token_env")
+        if not isinstance(access_token_env, str) or not access_token_env.strip():
+            calendar["access_token_env"] = self.default_config["calendar"]["access_token_env"]
+
+        credentials_access_token_key = calendar.get("credentials_access_token_key")
+        if not isinstance(credentials_access_token_key, str) or not credentials_access_token_key.strip():
+            calendar["credentials_access_token_key"] = self.default_config["calendar"]["credentials_access_token_key"]
+
+        credentials_expires_at_key = calendar.get("credentials_expires_at_key")
+        if not isinstance(credentials_expires_at_key, str) or not credentials_expires_at_key.strip():
+            calendar["credentials_expires_at_key"] = self.default_config["calendar"]["credentials_expires_at_key"]
+
+        default_calendar_id = calendar.get("default_calendar_id")
+        if not isinstance(default_calendar_id, str) or not default_calendar_id.strip():
+            calendar["default_calendar_id"] = self.default_config["calendar"]["default_calendar_id"]
+
+        days_ahead = calendar.get("days_ahead")
+        if not isinstance(days_ahead, int) or days_ahead <= 0:
+            calendar["days_ahead"] = self.default_config["calendar"]["days_ahead"]
 
         sync = data["sync"]
         provider = sync.get("provider")

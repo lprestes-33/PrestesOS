@@ -62,6 +62,12 @@ Status local da integracao com Gmail:
 prestes gmail-status
 ```
 
+Status local da integracao com Google Calendar:
+
+```bash
+prestes calendar-status
+```
+
 Preparacao de sincronizacao local:
 
 ```bash
@@ -202,6 +208,14 @@ Antes de alterar o projeto, leia nesta ordem:
 - tokens em arquivo podem informar expiracao;
 - a CLI pode exibir o status local da integracao com `prestes gmail-status`;
 - a leitura real da caixa de entrada ainda nao acontece nesta etapa.
+
+## Estado atual do Google Calendar
+
+- existe `CalendarService` em modo preparatorio;
+- a autenticacao aceita variavel de ambiente ou arquivo local de credenciais;
+- tokens em arquivo podem informar expiracao;
+- a CLI pode exibir o status local da integracao com `prestes calendar-status`;
+- a leitura real de eventos ainda nao acontece nesta etapa.
 
 ## Proximo objetivo
 

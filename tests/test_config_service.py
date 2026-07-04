@@ -57,6 +57,13 @@ def test_config_service_keeps_sync_defaults(prestes_base_dir):
     assert data["gmail"]["credentials_expires_at_key"] == "expires_at"
     assert data["gmail"]["default_query"] == "label:inbox newer_than:7d"
     assert data["gmail"]["max_results"] == 20
+    assert data["calendar"]["provider"] == "google-calendar-api-preparado"
+    assert Path(data["calendar"]["credentials_path"]) == prestes_base_dir / "config" / "google_calendar_credentials.json"
+    assert data["calendar"]["access_token_env"] == "GOOGLE_CALENDAR_ACCESS_TOKEN"
+    assert data["calendar"]["credentials_access_token_key"] == "access_token"
+    assert data["calendar"]["credentials_expires_at_key"] == "expires_at"
+    assert data["calendar"]["default_calendar_id"] == "primary"
+    assert data["calendar"]["days_ahead"] == 7
     assert data["sync"]["provider"] == "local-manifest"
     assert Path(data["sync"]["manifest_dir"]) == prestes_base_dir / "Sync"
     assert Path(data["sync"]["state_file"]) == prestes_base_dir / "Sync" / "sync_state.json"

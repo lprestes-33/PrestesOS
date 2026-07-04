@@ -115,6 +115,20 @@ def test_direct_gmail_status_command_dispatches_to_service(monkeypatch):
     assert calls == ["gmail"]
 
 
+def test_direct_calendar_status_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_status_calendar",
+        lambda: calls.append("calendar"),
+    )
+
+    main_module.main(["calendar-status"])
+
+    assert calls == ["calendar"]
+
+
 def test_direct_sync_command_dispatches_to_service(monkeypatch):
     calls = []
 

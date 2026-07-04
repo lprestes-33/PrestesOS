@@ -28,4 +28,5 @@
 16. [x] Exibir resumo por execucao de sincronizacao.
 17. [x] Melhorar autenticacao Google Drive.
 18. [x] Preparar integracao com Gmail.
-19. [ ] Preparar integracao com Google Calendar.
+19. [x] Preparar integracao com Google Calendar.
+20. [ ] Preparar integracao com NotebookLM.
