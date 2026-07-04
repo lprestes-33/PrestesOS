@@ -14,6 +14,7 @@ from prestes_os.services.event_bus import EventBus
 from prestes_os.services.gmail_service import GmailService
 from prestes_os.services.log_service import LogService
 from prestes_os.services.notebooklm_service import NotebookLMService
+from prestes_os.services.platform_service import PlatformService
 from prestes_os.services.search_service import SearchService
 from prestes_os.services.sync_service import SyncService
 from prestes_os.services.transcription_service import TranscriptionService
@@ -45,6 +46,7 @@ def build_parser():
     search_parser.add_argument("consulta", help="Texto a buscar.")
     semantic_parser = subparsers.add_parser("buscar-semantico", help="Busca semantica local nos conteudos indexados.")
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
+    subparsers.add_parser("status", help="Exibe um diagnostico consolidado da plataforma.")
     subparsers.add_parser("gmail-status", help="Exibe o preparo local da integracao com Gmail.")
     subparsers.add_parser("calendar-status", help="Exibe o preparo local da integracao com Google Calendar.")
     subparsers.add_parser("notebooklm-status", help="Exibe o preparo local da integracao com NotebookLM.")
@@ -168,6 +170,24 @@ def executar_status_notebooklm():
     console.print(f"[yellow]{status.auth.message}[/yellow]")
 
 
+def executar_status_plataforma():
+    report = PlatformService().status()
+    core_status = "sim" if report.core_ready else "nao"
+    console.print(f"[green]Alvo:[/green] {report.target_version}")
+    console.print(f"[green]Core pronto:[/green] {core_status}")
+
+    table = Table(title="Diagnostico da plataforma")
+    table.add_column("Area")
+    table.add_column("Status")
+    table.add_column("Mensagem")
+
+    for check in report.checks:
+        status_label = "ok" if check.status == "ok" else "aviso"
+        table.add_row(check.title, status_label, check.message)
+
+    console.print(table)
+
+
 def executar_preparacao_sync():
     service = SyncService()
     auth_state = service.resolve_google_drive_auth()
@@ -285,13 +305,14 @@ def executar_menu():
     table.add_row("7", "Resumo IA")
     table.add_row("8", "Buscar")
     table.add_row("9", "Buscar Semantico")
-    table.add_row("10", "Gmail Status")
-    table.add_row("11", "Calendar Status")
-    table.add_row("12", "NotebookLM Status")
-    table.add_row("13", "Sincronizar")
-    table.add_row("14", "Historico Sync")
-    table.add_row("15", "Falhas Sync")
-    table.add_row("16", "Resumo Sync")
+    table.add_row("10", "Status Plataforma")
+    table.add_row("11", "Gmail Status")
+    table.add_row("12", "Calendar Status")
+    table.add_row("13", "NotebookLM Status")
+    table.add_row("14", "Sincronizar")
+    table.add_row("15", "Historico Sync")
+    table.add_row("16", "Falhas Sync")
+    table.add_row("17", "Resumo Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -322,18 +343,20 @@ def executar_menu():
         consulta = console.input("Consulta semantica: ").strip()
         executar_busca_semantica(consulta)
     elif option == "10":
-        executar_status_gmail()
+        executar_status_plataforma()
     elif option == "11":
-        executar_status_calendar()
+        executar_status_gmail()
     elif option == "12":
-        executar_status_notebooklm()
+        executar_status_calendar()
     elif option == "13":
-        executar_preparacao_sync()
+        executar_status_notebooklm()
     elif option == "14":
-        executar_historico_sync()
+        executar_preparacao_sync()
     elif option == "15":
-        executar_falhas_sync()
+        executar_historico_sync()
     elif option == "16":
+        executar_falhas_sync()
+    elif option == "17":
         executar_resumo_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
@@ -359,6 +382,9 @@ def main(argv=None):
         return
     if args.command == "buscar-semantico":
         executar_busca_semantica(args.consulta)
+        return
+    if args.command == "status":
+        executar_status_plataforma()
         return
     if args.command == "gmail-status":
         executar_status_gmail()

@@ -56,6 +56,12 @@ Busca semantica local:
 prestes buscar-semantico jurisdicao
 ```
 
+Diagnostico consolidado da plataforma:
+
+```bash
+prestes status
+```
+
 Status local da integracao com Gmail:
 
 ```bash
@@ -230,6 +236,13 @@ Antes de alterar o projeto, leia nesta ordem:
 - tokens em arquivo podem informar expiracao;
 - a CLI pode exibir o status local da integracao com `prestes notebooklm-status`;
 - a conexao real com notebooks ainda nao acontece nesta etapa.
+
+## Estado atual do fechamento da v1.0
+
+- existe um diagnostico consolidado com `prestes status`;
+- o comando resume configuracao, banco, logs, sync basico e integracoes preparatorias;
+- o diagnostico separa base local pronta de integracoes opcionais ainda sem token;
+- essa visao unica facilita validar uso diario antes da evolucao para o proximo ciclo.
 
 ## Proximo objetivo
 

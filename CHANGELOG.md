@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.21
+- Novo comando `prestes status` para diagnostico consolidado da plataforma visando o fechamento operacional da v1.0.
+- `PlatformService` adicionado para resumir configuracao, banco, logs, sync e integracoes preparatorias.
+- Contadores simples adicionados ao `DatabaseService` para apoiar diagnosticos locais.
+- Testes adicionados para o diagnostico consolidado e para o despacho da CLI.
+
 ## v0.3.20
 - `NotebookLMService` adicionado para preparar autenticacao e configuracao da futura integracao com NotebookLM.
 - Novo comando `prestes notebooklm-status` para diagnostico local da integracao.

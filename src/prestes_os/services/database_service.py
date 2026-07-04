@@ -196,3 +196,24 @@ class DatabaseService:
         ).fetchall()
         conn.close()
         return rows
+
+    def count_recordings(self):
+        conn = self.connect()
+        cur = conn.cursor()
+        total = cur.execute("SELECT COUNT(*) FROM gravacoes").fetchone()[0]
+        conn.close()
+        return total
+
+    def count_transcriptions(self):
+        conn = self.connect()
+        cur = conn.cursor()
+        total = cur.execute("SELECT COUNT(*) FROM transcricoes").fetchone()[0]
+        conn.close()
+        return total
+
+    def count_search_documents(self):
+        conn = self.connect()
+        cur = conn.cursor()
+        total = cur.execute("SELECT COUNT(*) FROM search_index").fetchone()[0]
+        conn.close()
+        return total
