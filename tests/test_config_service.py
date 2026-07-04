@@ -50,6 +50,13 @@ def test_config_service_keeps_sync_defaults(prestes_base_dir):
 
     data = config.load()
 
+    assert data["gmail"]["provider"] == "gmail-api-preparado"
+    assert Path(data["gmail"]["credentials_path"]) == prestes_base_dir / "config" / "gmail_credentials.json"
+    assert data["gmail"]["access_token_env"] == "GMAIL_ACCESS_TOKEN"
+    assert data["gmail"]["credentials_access_token_key"] == "access_token"
+    assert data["gmail"]["credentials_expires_at_key"] == "expires_at"
+    assert data["gmail"]["default_query"] == "label:inbox newer_than:7d"
+    assert data["gmail"]["max_results"] == 20
     assert data["sync"]["provider"] == "local-manifest"
     assert Path(data["sync"]["manifest_dir"]) == prestes_base_dir / "Sync"
     assert Path(data["sync"]["state_file"]) == prestes_base_dir / "Sync" / "sync_state.json"

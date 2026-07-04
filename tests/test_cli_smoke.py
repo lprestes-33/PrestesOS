@@ -101,6 +101,20 @@ def test_direct_semantic_search_command_dispatches_to_service(monkeypatch):
     assert calls == ["jurisdicao"]
 
 
+def test_direct_gmail_status_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_status_gmail",
+        lambda: calls.append("gmail"),
+    )
+
+    main_module.main(["gmail-status"])
+
+    assert calls == ["gmail"]
+
+
 def test_direct_sync_command_dispatches_to_service(monkeypatch):
     calls = []
 

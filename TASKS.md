@@ -27,4 +27,5 @@
 15. [x] Mostrar falhas recentes de sincronizacao.
 16. [x] Exibir resumo por execucao de sincronizacao.
 17. [x] Melhorar autenticacao Google Drive.
-18. [ ] Preparar integracao com Gmail.
+18. [x] Preparar integracao com Gmail.
+19. [ ] Preparar integracao com Google Calendar.

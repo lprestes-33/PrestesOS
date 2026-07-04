@@ -56,6 +56,12 @@ Busca semantica local:
 prestes buscar-semantico jurisdicao
 ```
 
+Status local da integracao com Gmail:
+
+```bash
+prestes gmail-status
+```
+
 Preparacao de sincronizacao local:
 
 ```bash
@@ -188,6 +194,14 @@ Antes de alterar o projeto, leia nesta ordem:
 - cada execucao de sincronizacao pode ser auditada por um resumo de lote;
 - a autenticacao Google Drive aceita variavel de ambiente ou arquivo local de credenciais;
 - tokens vencidos em arquivo sao detectados antes do upload.
+
+## Estado atual do Gmail
+
+- existe `GmailService` em modo preparatorio;
+- a autenticacao aceita variavel de ambiente ou arquivo local de credenciais;
+- tokens em arquivo podem informar expiracao;
+- a CLI pode exibir o status local da integracao com `prestes gmail-status`;
+- a leitura real da caixa de entrada ainda nao acontece nesta etapa.
 
 ## Proximo objetivo
 

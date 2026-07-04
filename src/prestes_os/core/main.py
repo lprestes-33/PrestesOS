@@ -10,6 +10,7 @@ from prestes_os.services.ai_service import AIService
 from prestes_os.services.config_service import ConfigService
 from prestes_os.services.database_service import DatabaseService
 from prestes_os.services.event_bus import EventBus
+from prestes_os.services.gmail_service import GmailService
 from prestes_os.services.log_service import LogService
 from prestes_os.services.search_service import SearchService
 from prestes_os.services.sync_service import SyncService
@@ -42,6 +43,7 @@ def build_parser():
     search_parser.add_argument("consulta", help="Texto a buscar.")
     semantic_parser = subparsers.add_parser("buscar-semantico", help="Busca semantica local nos conteudos indexados.")
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
+    subparsers.add_parser("gmail-status", help="Exibe o preparo local da integracao com Gmail.")
     subparsers.add_parser("sincronizar", help="Gera manifesto local para sincronizacao futura.")
     subparsers.add_parser("historico-sync", help="Exibe o historico local de sincronizacao.")
     subparsers.add_parser("falhas-sync", help="Exibe falhas recentes de sincronizacao.")
@@ -124,6 +126,18 @@ def executar_busca_semantica(consulta):
         console.print(f"[bold]{result.title}[/bold] ({result.score:.2f})")
         console.print(f"{result.source_path}")
         console.print(result.snippet)
+
+
+def executar_status_gmail():
+    status = GmailService().status()
+    auth_status = "sim" if status.auth.access_token else "nao"
+    console.print(f"[green]Provider:[/green] {status.provider}")
+    console.print(f"[green]Autenticado:[/green] {auth_status}")
+    console.print(f"[green]Origem do token:[/green] {status.auth.source}")
+    console.print(f"[green]Arquivo de credenciais:[/green] {status.auth.credentials_path}")
+    console.print(f"[green]Consulta padrao:[/green] {status.default_query}")
+    console.print(f"[green]Maximo de resultados:[/green] {status.max_results}")
+    console.print(f"[yellow]{status.auth.message}[/yellow]")
 
 
 def executar_preparacao_sync():
@@ -243,10 +257,11 @@ def executar_menu():
     table.add_row("7", "Resumo IA")
     table.add_row("8", "Buscar")
     table.add_row("9", "Buscar Semantico")
-    table.add_row("10", "Sincronizar")
-    table.add_row("11", "Historico Sync")
-    table.add_row("12", "Falhas Sync")
-    table.add_row("13", "Resumo Sync")
+    table.add_row("10", "Gmail Status")
+    table.add_row("11", "Sincronizar")
+    table.add_row("12", "Historico Sync")
+    table.add_row("13", "Falhas Sync")
+    table.add_row("14", "Resumo Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -277,12 +292,14 @@ def executar_menu():
         consulta = console.input("Consulta semantica: ").strip()
         executar_busca_semantica(consulta)
     elif option == "10":
-        executar_preparacao_sync()
+        executar_status_gmail()
     elif option == "11":
-        executar_historico_sync()
+        executar_preparacao_sync()
     elif option == "12":
-        executar_falhas_sync()
+        executar_historico_sync()
     elif option == "13":
+        executar_falhas_sync()
+    elif option == "14":
         executar_resumo_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
@@ -308,6 +325,9 @@ def main(argv=None):
         return
     if args.command == "buscar-semantico":
         executar_busca_semantica(args.consulta)
+        return
+    if args.command == "gmail-status":
+        executar_status_gmail()
         return
     if args.command == "sincronizar":
         executar_preparacao_sync()

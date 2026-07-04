@@ -31,6 +31,15 @@ def build_default_config(base_dir: Path | None = None) -> dict:
             "openai_model": "gpt-4.1-mini",
             "resumos_dir": str(base / "Resumos"),
         },
+        "gmail": {
+            "provider": "gmail-api-preparado",
+            "credentials_path": str(base / "config" / "gmail_credentials.json"),
+            "access_token_env": "GMAIL_ACCESS_TOKEN",
+            "credentials_access_token_key": "access_token",
+            "credentials_expires_at_key": "expires_at",
+            "default_query": "label:inbox newer_than:7d",
+            "max_results": 20,
+        },
         "sync": {
             "provider": "local-manifest",
             "manifest_dir": str(base / "Sync"),
@@ -93,6 +102,7 @@ class ConfigService:
             ("database", "path"),
             ("logs", "path"),
             ("ai", "resumos_dir"),
+            ("gmail", "credentials_path"),
             ("sync", "manifest_dir"),
             ("sync", "state_file"),
             ("sync.google_drive", "credentials_path"),
@@ -133,6 +143,31 @@ class ConfigService:
         model = ai.get("openai_model")
         if not isinstance(model, str) or not model.strip():
             ai["openai_model"] = self.default_config["ai"]["openai_model"]
+
+        gmail = data["gmail"]
+        provider = gmail.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            gmail["provider"] = self.default_config["gmail"]["provider"]
+
+        access_token_env = gmail.get("access_token_env")
+        if not isinstance(access_token_env, str) or not access_token_env.strip():
+            gmail["access_token_env"] = self.default_config["gmail"]["access_token_env"]
+
+        credentials_access_token_key = gmail.get("credentials_access_token_key")
+        if not isinstance(credentials_access_token_key, str) or not credentials_access_token_key.strip():
+            gmail["credentials_access_token_key"] = self.default_config["gmail"]["credentials_access_token_key"]
+
+        credentials_expires_at_key = gmail.get("credentials_expires_at_key")
+        if not isinstance(credentials_expires_at_key, str) or not credentials_expires_at_key.strip():
+            gmail["credentials_expires_at_key"] = self.default_config["gmail"]["credentials_expires_at_key"]
+
+        default_query = gmail.get("default_query")
+        if not isinstance(default_query, str) or not default_query.strip():
+            gmail["default_query"] = self.default_config["gmail"]["default_query"]
+
+        max_results = gmail.get("max_results")
+        if not isinstance(max_results, int) or max_results <= 0:
+            gmail["max_results"] = self.default_config["gmail"]["max_results"]
 
         sync = data["sync"]
         provider = sync.get("provider")

@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.18
+- `GmailService` adicionado para preparar autenticacao e configuracao da futura integracao com Gmail.
+- Novo comando `prestes gmail-status` para diagnostico local da integracao.
+- Configuracao `gmail` adicionada ao YAML com token por ambiente ou arquivo local.
+- Testes adicionados para autenticacao Gmail e despacho da CLI.
+
 ## v0.3.17
 - Autenticacao Google Drive melhorada com suporte a token por arquivo local ou variavel de ambiente.
 - Tokens em arquivo agora podem informar expiracao e sao validados antes do upload.
