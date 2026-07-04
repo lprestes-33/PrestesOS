@@ -49,6 +49,15 @@ def build_default_config(base_dir: Path | None = None) -> dict:
             "default_calendar_id": "primary",
             "days_ahead": 7,
         },
+        "notebooklm": {
+            "provider": "notebooklm-api-preparado",
+            "credentials_path": str(base / "config" / "notebooklm_credentials.json"),
+            "access_token_env": "NOTEBOOKLM_ACCESS_TOKEN",
+            "credentials_access_token_key": "access_token",
+            "credentials_expires_at_key": "expires_at",
+            "default_notebook": "PrestesOS",
+            "max_sources": 20,
+        },
         "sync": {
             "provider": "local-manifest",
             "manifest_dir": str(base / "Sync"),
@@ -113,6 +122,7 @@ class ConfigService:
             ("ai", "resumos_dir"),
             ("gmail", "credentials_path"),
             ("calendar", "credentials_path"),
+            ("notebooklm", "credentials_path"),
             ("sync", "manifest_dir"),
             ("sync", "state_file"),
             ("sync.google_drive", "credentials_path"),
@@ -203,6 +213,31 @@ class ConfigService:
         days_ahead = calendar.get("days_ahead")
         if not isinstance(days_ahead, int) or days_ahead <= 0:
             calendar["days_ahead"] = self.default_config["calendar"]["days_ahead"]
+
+        notebooklm = data["notebooklm"]
+        provider = notebooklm.get("provider")
+        if not isinstance(provider, str) or not provider.strip():
+            notebooklm["provider"] = self.default_config["notebooklm"]["provider"]
+
+        access_token_env = notebooklm.get("access_token_env")
+        if not isinstance(access_token_env, str) or not access_token_env.strip():
+            notebooklm["access_token_env"] = self.default_config["notebooklm"]["access_token_env"]
+
+        credentials_access_token_key = notebooklm.get("credentials_access_token_key")
+        if not isinstance(credentials_access_token_key, str) or not credentials_access_token_key.strip():
+            notebooklm["credentials_access_token_key"] = self.default_config["notebooklm"]["credentials_access_token_key"]
+
+        credentials_expires_at_key = notebooklm.get("credentials_expires_at_key")
+        if not isinstance(credentials_expires_at_key, str) or not credentials_expires_at_key.strip():
+            notebooklm["credentials_expires_at_key"] = self.default_config["notebooklm"]["credentials_expires_at_key"]
+
+        default_notebook = notebooklm.get("default_notebook")
+        if not isinstance(default_notebook, str) or not default_notebook.strip():
+            notebooklm["default_notebook"] = self.default_config["notebooklm"]["default_notebook"]
+
+        max_sources = notebooklm.get("max_sources")
+        if not isinstance(max_sources, int) or max_sources <= 0:
+            notebooklm["max_sources"] = self.default_config["notebooklm"]["max_sources"]
 
         sync = data["sync"]
         provider = sync.get("provider")

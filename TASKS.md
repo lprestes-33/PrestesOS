@@ -29,4 +29,5 @@
 17. [x] Melhorar autenticacao Google Drive.
 18. [x] Preparar integracao com Gmail.
 19. [x] Preparar integracao com Google Calendar.
-20. [ ] Preparar integracao com NotebookLM.
+20. [x] Preparar integracao com NotebookLM.
+21. [ ] Preparar fechamento da v1.0.

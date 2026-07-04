@@ -129,6 +129,20 @@ def test_direct_calendar_status_command_dispatches_to_service(monkeypatch):
     assert calls == ["calendar"]
 
 
+def test_direct_notebooklm_status_command_dispatches_to_service(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(
+        main_module,
+        "executar_status_notebooklm",
+        lambda: calls.append("notebooklm"),
+    )
+
+    main_module.main(["notebooklm-status"])
+
+    assert calls == ["notebooklm"]
+
+
 def test_direct_sync_command_dispatches_to_service(monkeypatch):
     calls = []
 

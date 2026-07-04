@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.20
+- `NotebookLMService` adicionado para preparar autenticacao e configuracao da futura integracao com NotebookLM.
+- Novo comando `prestes notebooklm-status` para diagnostico local da integracao.
+- Configuracao `notebooklm` adicionada ao YAML com token por ambiente ou arquivo local.
+- Testes adicionados para autenticacao NotebookLM e despacho da CLI.
+
 ## v0.3.19
 - `CalendarService` adicionado para preparar autenticacao e configuracao da futura integracao com Google Calendar.
 - Novo comando `prestes calendar-status` para diagnostico local da integracao.
