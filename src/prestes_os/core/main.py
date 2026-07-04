@@ -44,6 +44,7 @@ def build_parser():
     semantic_parser.add_argument("consulta", help="Ideia ou conceito a buscar.")
     subparsers.add_parser("sincronizar", help="Gera manifesto local para sincronizacao futura.")
     subparsers.add_parser("historico-sync", help="Exibe o historico local de sincronizacao.")
+    subparsers.add_parser("falhas-sync", help="Exibe falhas recentes de sincronizacao.")
     return parser
 
 
@@ -160,6 +161,26 @@ def executar_historico_sync():
     console.print(table)
 
 
+def executar_falhas_sync():
+    failures = SyncService().read_sync_failures()
+    console.print(f"[green]Arquivo de falhas:[/green] {failures.failure_file}")
+    console.print(f"[green]Falhas registradas:[/green] {failures.total_items}")
+    if not failures.items:
+        console.print("[yellow]Nenhuma falha recente de sincronizacao encontrada.[/yellow]")
+        return
+
+    table = Table(title="Falhas recentes de sincronizacao")
+    table.add_column("Falhou em")
+    table.add_column("Arquivo local")
+    table.add_column("Destino remoto")
+    table.add_column("Erro")
+
+    for item in failures.items:
+        table.add_row(item.failed_at, item.relative_path, item.remote_path, item.error_message)
+
+    console.print(table)
+
+
 def executar_menu():
     db = DatabaseService()
     bus = EventBus()
@@ -188,6 +209,7 @@ def executar_menu():
     table.add_row("9", "Buscar Semantico")
     table.add_row("10", "Sincronizar")
     table.add_row("11", "Historico Sync")
+    table.add_row("12", "Falhas Sync")
     table.add_row("0", "Sair")
     console.print(table)
 
@@ -221,6 +243,8 @@ def executar_menu():
         executar_preparacao_sync()
     elif option == "11":
         executar_historico_sync()
+    elif option == "12":
+        executar_falhas_sync()
     elif option == "0":
         bus.publish("sistema.encerrado", "kernel", "Usuario saiu do PrestesOS")
     else:
@@ -251,6 +275,9 @@ def main(argv=None):
         return
     if args.command == "historico-sync":
         executar_historico_sync()
+        return
+    if args.command == "falhas-sync":
+        executar_falhas_sync()
         return
 
     executar_menu()

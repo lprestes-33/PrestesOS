@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.15
+- Novo comando `prestes falhas-sync` para exibir falhas recentes de sincronizacao.
+- `SyncService` passou a persistir falhas locais de upload em arquivo JSON dedicado.
+- Falhas por arquivo nao interrompem os demais uploads do mesmo lote.
+- Testes adicionados para registro de falhas e despacho da CLI.
+
 ## v0.3.14
 - Novo comando `prestes historico-sync` para exibir o historico local de sincronizacao.
 - `SyncService` passou a expor leitura estruturada do estado incremental persistido.

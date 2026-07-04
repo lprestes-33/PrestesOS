@@ -124,6 +124,26 @@ class SyncHistorySnapshot:
     items: list[SyncHistoryItem]
 
 
+@dataclass
+class SyncFailureItem:
+    """Responsabilidade: representar uma falha recente de sincronizacao."""
+
+    failed_at: str
+    provider: str
+    relative_path: str
+    remote_path: str
+    error_message: str
+
+
+@dataclass
+class SyncFailureSnapshot:
+    """Responsabilidade: representar as falhas recentes persistidas localmente."""
+
+    failure_file: Path
+    total_items: int
+    items: list[SyncFailureItem]
+
+
 class SyncConfigurationError(RuntimeError):
     """Responsabilidade: sinalizar configuracao invalida para sincronizacao remota."""
 
@@ -282,6 +302,9 @@ class SyncService:
     def _sync_state_file(self) -> Path:
         return Path(self.config.get("sync.state_file")).expanduser()
 
+    def _sync_failure_file(self) -> Path:
+        return self._manifest_dir() / "sync_failures.json"
+
     def _google_drive_config(self) -> dict:
         return self.config.get("sync.google_drive", {}) or {}
 
@@ -349,6 +372,48 @@ class SyncService:
         }
         state_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
 
+    def _load_sync_failures(self) -> list[SyncFailureItem]:
+        failure_file = self._sync_failure_file()
+        if not failure_file.exists():
+            return []
+
+        payload = json.loads(failure_file.read_text(encoding="utf-8"))
+        items = []
+        for raw_item in payload.get("items", []):
+            items.append(
+                SyncFailureItem(
+                    failed_at=str(raw_item.get("failed_at", "")),
+                    provider=str(raw_item.get("provider", "")),
+                    relative_path=str(raw_item.get("relative_path", "")),
+                    remote_path=str(raw_item.get("remote_path", "")),
+                    error_message=str(raw_item.get("error_message", "")),
+                )
+            )
+        return items
+
+    def _save_sync_failures(self, items: list[SyncFailureItem]) -> None:
+        failure_file = self._sync_failure_file()
+        failure_file.parent.mkdir(parents=True, exist_ok=True)
+        payload = {
+            "updated_at": datetime.now().isoformat(timespec="seconds"),
+            "items": [
+                {
+                    "failed_at": item.failed_at,
+                    "provider": item.provider,
+                    "relative_path": item.relative_path,
+                    "remote_path": item.remote_path,
+                    "error_message": item.error_message,
+                }
+                for item in items[:20]
+            ],
+        }
+        failure_file.write_text(json.dumps(payload, indent=2, ensure_ascii=True), encoding="utf-8")
+
+    def _record_sync_failure(self, item: SyncFailureItem) -> None:
+        failures = self._load_sync_failures()
+        failures.insert(0, item)
+        self._save_sync_failures(failures)
+
     def read_sync_history(self) -> SyncHistorySnapshot:
         state = self._load_sync_state()
         items = [
@@ -367,6 +432,14 @@ class SyncService:
         ]
         return SyncHistorySnapshot(
             state_file=self._sync_state_file(),
+            total_items=len(items),
+            items=items,
+        )
+
+    def read_sync_failures(self) -> SyncFailureSnapshot:
+        items = self._load_sync_failures()
+        return SyncFailureSnapshot(
+            failure_file=self._sync_failure_file(),
             total_items=len(items),
             items=items,
         )
@@ -566,8 +639,25 @@ class SyncService:
         for plan_item in upload_plan.items:
             path_parts = [part for part in Path(plan_item.remote_path).parts if part not in {".", ""}]
             folder_parts = path_parts[:-1]
-            parent_id = client.ensure_folder_path(folder_parts)
-            status, file_id = client.upload_file(parent_id, path_parts[-1], plan_item.local_path)
+            try:
+                parent_id = client.ensure_folder_path(folder_parts)
+                status, file_id = client.upload_file(parent_id, path_parts[-1], plan_item.local_path)
+            except Exception as exc:
+                failure = SyncFailureItem(
+                    failed_at=datetime.now().isoformat(timespec="seconds"),
+                    provider="google-drive",
+                    relative_path=str(plan_item.local_path.relative_to(self._base_dir())),
+                    remote_path=plan_item.remote_path,
+                    error_message=str(exc),
+                )
+                self._record_sync_failure(failure)
+                self.bus.publish(
+                    "sync.google_drive.file_failed",
+                    "sync",
+                    str(plan_item.local_path),
+                    payload={"remote_path": plan_item.remote_path, "error": str(exc)},
+                )
+                continue
             items.append(
                 SyncUploadItemResult(
                     local_path=plan_item.local_path,
